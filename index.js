@@ -1,13 +1,14 @@
 const express = require("express"),
   app = express();
 
+/*
 const cors = require("cors");
 
 const session = require("express-session");
 
 const passport = require("passport");
 
-const bodyParser = require('body-parser')
+const bodyParser = require("body-parser");
 
 require("dotenv").config({ path: "./.env" });
 
@@ -25,10 +26,9 @@ app.use(
 );
 
 app.use(express.json());
-app.use(bodyParser.json()); app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
-
-const port = process.env.PORT;
 
 app.get("/", (req, res) => {
   res.send("Hello World");
@@ -86,17 +86,25 @@ app.post("/sign-in", async (req, res) => {
   }
 });
 
-initPassport(app)
+initPassport(app);
 
-app.get('/login/facebook', passport.authenticate('facebook'));
+app.get("/login/facebook", passport.authenticate("facebook"));
 
-app.get('/oauth2/redirect/facebook',
-  passport.authenticate('facebook', { failureRedirect: '/login', failureMessage: true }),
-  function(req, res) {
-    res.redirect('/');
-  });
+app.get(
+  "/oauth2/redirect/facebook",
+  passport.authenticate("facebook", {
+    failureRedirect: "/login",
+    failureMessage: true,
+  }),
+  function (req, res) {
+    res.redirect("/");
+  }
+);
+const port = process.env.PORT; */
 
-
+app.get("/", (req, res) => {
+  res.send("Hello word");
+});
 
 app.listen(port, () => {
   console.log(`🚀 Server running at: ${port}`);
