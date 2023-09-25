@@ -9,9 +9,6 @@ const passport = require("passport");
 
 const bodyParser = require('body-parser')
 
-const https = require('https')
-const fs = require('fs')
-
 require("dotenv").config({ path: "./.env" });
 
 const { PrismaClient } = require("@prisma/client");
