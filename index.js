@@ -3,7 +3,7 @@ const express = require("express"),
 
 require("dotenv").config({ path: "./.env" });
 
-/*
+
 const cors = require("cors");
 
 const session = require("express-session");
@@ -102,7 +102,7 @@ app.get(
     res.redirect("/");
   }
 );
-const port = process.env.PORT; */
+
 
 const port = process.env.PORT;
 
