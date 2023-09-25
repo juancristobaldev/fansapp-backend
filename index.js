@@ -1,6 +1,8 @@
 const express = require("express"),
   app = express();
 
+require("dotenv").config({ path: "./.env" });
+
 /*
 const cors = require("cors");
 
@@ -101,6 +103,8 @@ app.get(
   }
 );
 const port = process.env.PORT; */
+
+const port = process.env.PORT;
 
 app.get("/", (req, res) => {
   res.send("Hello word");
