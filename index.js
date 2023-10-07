@@ -1,21 +1,17 @@
 const express = require("express"),
   app = express();
 
-require("dotenv").config({ path: "./.env" });
-
-
 const cors = require("cors");
-
 const session = require("express-session");
-
 const passport = require("passport");
-
 const bodyParser = require("body-parser");
 
 require("dotenv").config({ path: "./.env" });
 
 const { PrismaClient } = require("@prisma/client");
 const { initPassport } = require("./lib/initPassport");
+
+const userRoutes = require("./lib/routes/users");
 
 const prisma = new PrismaClient();
 
@@ -36,35 +32,9 @@ app.get("/", (req, res) => {
   res.send("Hello World");
 });
 
-app.get("/users", async (req, res) => {
-  const users = await prisma.users.findMany();
+//Routes
 
-  res.send(JSON.stringify(users));
-});
-
-app.post("/create-user", async (req, res) => {
-  console.log(req.body);
-
-  const data = req.body;
-
-  const response = await prisma.users.create({
-    data: {
-      ...data,
-    },
-  });
-
-  if (response) {
-    res.send({
-      success: true,
-      data: response,
-    });
-  } else {
-    res.send({
-      success: false,
-      data: response,
-    });
-  }
-});
+app.use("/users", userRoutes);
 
 app.post("/sign-in", async (req, res) => {
   const data = req.body;
@@ -90,28 +60,39 @@ app.post("/sign-in", async (req, res) => {
 
 initPassport(app);
 
-app.get("/login/facebook", passport.authenticate("facebook"));
+app.get("/success", async (req, res) => {
+  const user = await req.user;
 
+  if (user) {
+    const userQueryParams = new URLSearchParams({ user: JSON.stringify(user) });
+    res.redirect(
+      `fansapp://localhost:3000/${userQueryParams.toString()}`
+    );
+  }
+});
+
+app.get("/login/federated/google", passport.authenticate("google"));
 app.get(
-  "/oauth2/redirect/facebook",
-  passport.authenticate("facebook", {
-    failureRedirect: "/login",
-    failureMessage: true,
-  }),
-  function (req, res) {
-    res.redirect("/");
+  "/oauth2/redirect/google",
+  passport.authenticate("google"),
+  (req, res) => {
+    res.redirect(`/success`);
   }
 );
 
+app.get("/login/federated/facebook", passport.authenticate("facebook"));
+app.get(
+  "/oauth2/redirect/facebook",
+  passport.authenticate("facebook", {
+    successRedirect: "/success",
+    failureRedirect: "/login",
+  })
+);
 
 const port = process.env.PORT;
-
-app.get("/", (req, res) => {
-  res.send("Hello word");
-});
 
 app.listen(port, () => {
   console.log(`🚀 Server running at: ${port}`);
 });
 
-module.exports = app
+module.exports = app;
