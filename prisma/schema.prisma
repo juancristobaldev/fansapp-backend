@@ -40,12 +40,15 @@ model profile {
 
 model posts {
   id        Int        @unique @default(autoincrement())
-  uri        String  @db.Text
+  multimedia        String  @db.Text
   createdAt DateTime   @default(now())
   updatedAt DateTime?  @updatedAt
-  users     users?     @relation(fields: [usersId], references: [id])
   type      String     @db.VarChar(30)
+  description String? @db.VarChar(200)
+  location String? @db.Text()
+  onlySuscriptors Boolean
   usersId   Int?
+  users     users?     @relation(fields: [usersId], references: [id])
   likes     likes[]
   comments  comments[]
 }
