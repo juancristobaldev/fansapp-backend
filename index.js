@@ -65,9 +65,7 @@ app.get("/success", async (req, res) => {
 
   if (user) {
     const userQueryParams = new URLSearchParams({ user: JSON.stringify(user) });
-    res.redirect(
-      `fansapp://localhost:3000/${userQueryParams.toString()}`
-    );
+    res.redirect(`fansapp://localhost:3000/${userQueryParams.toString()}`);
   }
 });
 
