@@ -7,6 +7,7 @@ const passport = require("passport");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const path = require("path");
+const useragent = require("express-useragent");
 
 const typeDefs = require("./lib/gql/defs");
 
@@ -117,6 +118,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.set("trust proxy", true); // Confía en las cabeceras de proxy
 //Routes
 /*
 
@@ -129,41 +132,24 @@ const server = new ApolloServer({
   resolvers: resolvers,
   context: ({ req }) => {
     return {
+      userAgent: req.useragent,
       authorization: req.headers.authorization,
+      ipAddress: req.ip,
     };
   },
   csrfPrevention: true,
   cache: "bounded",
 });
 
+app.use(useragent.express());
+
 async function startApolloServer() {
   await server.start();
   server.applyMiddleware({ app });
 }
 
-app.post("/sign-in", async (req, res) => {
-  const data = req.body;
-
-  const user = await prisma.users.findUnique({
-    where: {
-      email: data.email,
-    },
-  });
-
-  if (user && data.password === user.password) {
-    res.send({
-      success: true,
-      data: user,
-    });
-  } else {
-    res.send({
-      success: false,
-      error: "Email y/ó contraseña incorrecta",
-    });
-  }
-});
-
 app.post("/delete-files", (req, res) => {
+  console.log("delete");
   req.body.forEach((paths) => {
     if (fs.existsSync(paths.deleteFilePath)) {
       fs.unlinkSync(paths.deleteFilePath);
@@ -190,6 +176,8 @@ app.post(
 
     const paths = req.compressedFiles;
 
+    console.log(paths);
+
     if (paths.length) {
       if (to === "post") {
         const multimedias = paths.map((multimedia) => ({
@@ -203,19 +191,21 @@ app.post(
           data: multimedias,
         });
       } else if (to === "frontPage" || to === "photo") {
-        let data = {};
-
-        if (to === "frontPage") data.frontPage = paths[0].outputFilePath;
-        else {
-          data.photo = paths[0].outputFilePath;
-        }
-
-        await prisma.profile.update({
+        const profile = await prisma.profile.findUnique({
           where: {
             userId: parseInt(user),
           },
-          data: data,
         });
+
+        if (to === "frontPage") {
+          if (profile.frontPage) {
+            fs.unlinkSync(profile.frontPage);
+          }
+        } else {
+          if (profile.photo) {
+            fs.unlinkSync(profile.photo);
+          }
+        }
       }
 
       const response = await fetch("http://localhost:3001/delete-files", {
@@ -229,6 +219,7 @@ app.post(
       if (response.status === 200) {
         res.json({
           success: true,
+          paths: paths,
         });
       } else {
         res.json({

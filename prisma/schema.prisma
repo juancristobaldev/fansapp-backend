@@ -12,63 +12,160 @@ datasource db {
 }
 
 model users {
-  id         Int          @unique @default(autoincrement())
-  token      String       @unique @db.VarChar(40)
-  username   String       @unique @db.VarChar(15)
-  firstName  String       @db.VarChar(20)
-  lastName   String       @db.VarChar(20)
-  gender     String?      @db.VarChar(6)
-  birthday   String?      @db.VarChar(15)
-  email      String       @unique @db.VarChar(60)
-  password   String       @db.VarChar(255)
-  createdAt  DateTime     @default(now())
-  updateAt   DateTime?    @updatedAt
-  profile    profile?
-  likes      likes[]
-  posts      posts[]
-  comments   comments[]
-  multimedia multimedia[]
+  id              Int            @unique @default(autoincrement())
+  token           String         @unique @db.VarChar(40)
+  username        String         @unique @db.VarChar(25)
+  firstName       String         @db.VarChar(20)
+  lastName        String         @db.VarChar(20)
+  gender          String?        @db.VarChar(20)
+  phoneNumber     String?        @db.VarChar(20)
+  birthday        String?        @db.VarChar(15)
+  email           String         @unique @db.VarChar(60)
+  password        String         @db.VarChar(255)
+  createdAt       DateTime       @default(now())
+  updateAt        DateTime?      @updatedAt
+  updateFirstName Boolean        @default(false)
+  updateLastName  Boolean        @default(false)
+  profile         profile?
+  likes           likes[]
+  posts           posts[]
+  comments        comments[]
+  multimedia      multimedia[]
+  bookmarkers     bookmarkers[]
+  suscriptions    suscriptions[]
+  creator         creator?
+  privacity       privacity?
+  blockeds        blockeds[]
+  theme           theme?
+  notifications   notifications?
+  sessions        sessions[]
 }
 
 model profile {
   id          Int     @unique @default(autoincrement())
+  linkProfile String? @db.Text
   photo       String? @db.Text
   description String? @db.Text
+  location    String? @db.Text
+  language    String? @db.Text
   frontPage   String? @db.Text
+  tiktok      String? @db.Text
+  instagram   String? @db.Text
   userId      Int     @unique
   users       users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model privacity {
+  id       Int    @id @unique @default(autoincrement())
+  userId   Int    @unique
+  users    users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile  String @default("all") @db.VarChar(20)
+  messages String @default("nobody") @db.VarChar(20)
+}
+
+model blockeds {
+  id        Int   @id @unique @default(autoincrement())
+  userId    Int
+  users     users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blockedBy Int
+}
+
+model sessions {
+  id            Int      @id @unique @default(autoincrement())
+  deviceName    String   @db.VarChar(30)
+  lastSessionAt DateTime @default(now())
+  signInAt      DateTime @default(now())
+  browser       String   @db.VarChar(30)
+  source        String   @db.Text
+  user          users?   @relation(fields: [userId], references: [id])
+  userId        Int?
+}
+
+model notifications {
+  id           Int     @id @unique @default(autoincrement())
+  messages     Boolean @default(true)
+  paidMessages Boolean @default(true)
+  likes        Boolean @default(true)
+  comments     Boolean @default(true)
+  donations    Boolean @default(true)
+  suscriptors  Boolean @default(true)
+  users        users   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId      Int     @unique
+}
+
+model theme {
+  id          Int     @id @unique @default(autoincrement())
+  darkMode    Boolean @default(false)
+  languageApp String  @default("spanish") @db.VarChar(20)
+  themeColor  String  @default("#eb117a") @db.Char(7)
+  users       users   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId     Int     @unique
+}
+
+model suscriptions {
+  id        Int      @unique @default(autoincrement())
+  users     users?   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId   Int?
+  creator   creator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId Int?
+  createdAt DateTime @default(now())
+  deadDate  DateTime
+  price     Int?
+}
+
+model creator {
+  id          Int            @unique @default(autoincrement())
+  status      String         @default("pending") @db.VarChar(30)
+  suscriptors suscriptions[]
+  userId      Int            @unique
+  users       users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country     String         @db.VarChar(60)
+  city        String         @db.VarChar(60)
+  address     String         @db.VarChar(60)
+  zipCode     String         @db.VarChar(60)
+  dniFront    String         @db.Text
+  dniBack     String         @db.Text
+}
+
+model bookmarkers {
+  id      Int   @unique @default(autoincrement())
+  post    posts @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  postsId Int
+  users   users @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId Int
 }
 
 model multimedia {
   id      Int    @unique @default(autoincrement())
   source  String @db.Text
   type    String @db.VarChar(10)
-  posts   posts? @relation(fields: [postsId], references: [id])
+  posts   posts? @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId Int?
-  users   users? @relation(fields: [usersId], references: [id])
+  users   users? @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId Int?
 }
 
 model posts {
-  id              Int          @unique @default(autoincrement())
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime?    @updatedAt
-  description     String?      @db.VarChar(200)
-  location        String?      @db.Text()
+  id              Int           @unique @default(autoincrement())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime?     @updatedAt
+  description     String?       @db.VarChar(200)
+  location        String?       @db.Text()
   onlySuscriptors Boolean
   usersId         Int?
-  users           users?       @relation(fields: [usersId], references: [id])
+  users           users?        @relation(fields: [usersId], references: [id], onDelete: Cascade)
   likes           likes[]
   comments        comments[]
   multimedia      multimedia[]
+  bookmarkers     bookmarkers[]
 }
 
 model likes {
-  id      Int    @unique @default(autoincrement())
-  users   users? @relation(fields: [usersId], references: [id])
+  id      Int   @unique @default(autoincrement())
+  users   users @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId Int
-  media   posts? @relation(fields: [mediaId], references: [id])
-  mediaId Int?
+  media   posts @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId Int
 }
 
 model comments {
@@ -79,8 +176,8 @@ model comments {
   parentId    Int?       @map("parent_id")
   parent      comments?  @relation("Subcomentarios", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subcomments comments[] @relation("Subcomentarios")
-  users       users?     @relation(fields: [usersId], references: [id])
+  users       users?     @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId     Int?
-  posts       posts?     @relation(fields: [postsId], references: [id])
+  posts       posts?     @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId     Int?
 }
