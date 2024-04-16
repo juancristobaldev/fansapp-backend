@@ -103,36 +103,52 @@ model theme {
 }
 
 model suscriptions {
-  id        Int      @unique @default(autoincrement())
-  users     users?   @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId   Int?
-  creator   creator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  id        Int       @unique @default(autoincrement())
+  user      users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+  creator   creator?  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId Int?
-  createdAt DateTime @default(now())
-  deadDate  DateTime
+  createdAt DateTime  @default(now())
+  deadDate  DateTime?
   price     Int?
+}
+
+model details {
+  id          Int     @unique @default(autoincrement())
+  suscription Float   @default(4.99)
+  paidMessage Float   @default(9.99)
+  title       String? @db.VarChar(70)
+  description String? @db.VarChar(255)
+  creator     creator @relation(fields: [creatorId], references: [id])
+  creatorId   Int     @unique
 }
 
 model creator {
   id          Int            @unique @default(autoincrement())
   status      String         @default("pending") @db.VarChar(30)
+  likes       likes[]
   suscriptors suscriptions[]
+  saveds      bookmarkers[]
   userId      Int            @unique
-  users       users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        users          @relation(fields: [userId], references: [id], onDelete: Cascade)
   country     String         @db.VarChar(60)
   city        String         @db.VarChar(60)
   address     String         @db.VarChar(60)
   zipCode     String         @db.VarChar(60)
   dniFront    String         @db.Text
   dniBack     String         @db.Text
+  details     details?
 }
 
 model bookmarkers {
-  id      Int   @unique @default(autoincrement())
-  post    posts @relation(fields: [postsId], references: [id], onDelete: Cascade)
-  postsId Int
-  users   users @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId Int
+  id        Int      @unique @default(autoincrement())
+  post      posts?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  postsId   Int?
+  creator   creator? @relation(fields: [creatorId], references: [id])
+  creatorId Int?
+  users     users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId   Int
+  createdAt DateTime @default(now())
 }
 
 model multimedia {
@@ -146,26 +162,28 @@ model multimedia {
 }
 
 model posts {
-  id              Int           @unique @default(autoincrement())
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime?     @updatedAt
-  description     String?       @db.VarChar(200)
-  location        String?       @db.Text()
-  onlySuscriptors Boolean
-  usersId         Int?
-  users           users?        @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  likes           likes[]
-  comments        comments[]
-  multimedia      multimedia[]
-  bookmarkers     bookmarkers[]
+  id          Int           @unique @default(autoincrement())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime?     @updatedAt
+  description String?       @db.VarChar(200)
+  location    String?       @db.Text()
+  privacity   String        @default("suscriptors") @db.VarChar(15)
+  usersId     Int?
+  users       users?        @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  likes       likes[]
+  comments    comments[]
+  multimedia  multimedia[]
+  bookmarkers bookmarkers[]
 }
 
 model likes {
-  id      Int   @unique @default(autoincrement())
-  users   users @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId Int
-  media   posts @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  mediaId Int
+  id        Int      @unique @default(autoincrement())
+  users     users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId   Int
+  media     posts    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId   Int
+  creator   creator? @relation(fields: [creatorId], references: [id])
+  creatorId Int?
 }
 
 model comments {

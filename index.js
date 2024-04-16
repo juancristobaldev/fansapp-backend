@@ -1,27 +1,71 @@
 const express = require("express"),
   app = express();
-
-const cors = require("cors");
 const session = require("express-session");
+const cors = require("cors");
 const passport = require("passport");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const path = require("path");
 const useragent = require("express-useragent");
-
 const typeDefs = require("./lib/gql/defs");
-
 require("dotenv").config({ path: "./.env" });
-
 const { PrismaClient } = require("@prisma/client");
 const { initPassport } = require("./lib/initPassport");
-
 const resolvers = require("./lib/resolvers");
 const { ApolloServer } = require("apollo-server-express");
 const sharp = require("sharp");
 const { exec } = require("child_process");
 const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
+const { createServer } = require("http");
+
+app.use(
+  session({
+    resave: false,
+    saveUninitialized: true,
+    secret: process.env.SECRET_EXPRESS_SESSION,
+  })
+);
+
+app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.set("trust proxy", true); // Confía en las cabeceras de proxy
+app.use(useragent.express());
+
+const httpServer = createServer(app);
+
+const io = require("socket.io")(httpServer, {
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("connected");
+
+  socket.on("session", (session) => {
+    console.log(session);
+  });
+
+  socket.on("logOut", async (data) => {
+    await prisma.sessions.delete({
+      where: {
+        userId: data.userId,
+        id: parseInt(data.sessionId),
+      },
+    });
+
+    console.log(data);
+
+    io.emit("logOutSuccess", {
+      userId: data.userId,
+      sessionId: data.sessionId,
+    });
+  });
+});
 
 const prisma = new PrismaClient();
 
@@ -105,28 +149,6 @@ const compressFilesMiddleware = async (req, res, next) => {
   }
 };
 
-app.use(
-  session({
-    resave: false,
-    saveUninitialized: true,
-    secret: process.env.SECRET_EXPRESS_SESSION,
-  })
-);
-
-app.use(express.json());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.set("trust proxy", true); // Confía en las cabeceras de proxy
-//Routes
-/*
-
-app.use("/users", userRoutes);
-app.use("/posts", postRoutes);
- */
-
 const server = new ApolloServer({
   typeDefs: typeDefs,
   resolvers: resolvers,
@@ -135,13 +157,12 @@ const server = new ApolloServer({
       userAgent: req.useragent,
       authorization: req.headers.authorization,
       ipAddress: req.ip,
+      io: io,
     };
   },
   csrfPrevention: true,
   cache: "bounded",
 });
-
-app.use(useragent.express());
 
 async function startApolloServer() {
   await server.start();
@@ -165,6 +186,10 @@ app.post("/delete-files", (req, res) => {
   });
 });
 
+app.post("/flowPayment", (req, res) => {
+  console.log(req.body);
+});
+
 app.post(
   "/upload-files",
   upload.array("files"),
@@ -179,6 +204,8 @@ app.post(
     console.log(paths);
 
     if (paths.length) {
+      let prismaMedias;
+
       if (to === "post") {
         const multimedias = paths.map((multimedia) => ({
           type: multimedia.type,
@@ -189,6 +216,12 @@ app.post(
 
         await prisma.multimedia.createMany({
           data: multimedias,
+        });
+
+        prismaMedias = await prisma.multimedia.findMany({
+          where: {
+            postsId: parseInt(id),
+          },
         });
       } else if (to === "frontPage" || to === "photo") {
         const profile = await prisma.profile.findUnique({
@@ -220,6 +253,7 @@ app.post(
         res.json({
           success: true,
           paths: paths,
+          multimedias: prismaMedias,
         });
       } else {
         res.json({
@@ -231,6 +265,12 @@ app.post(
 );
 
 initPassport(app);
+
+app.get("/", (req, res) => {
+  io.emit("path", "/");
+
+  res.send("Node.JS SERVER");
+});
 
 app.get("/success", async (req, res) => {
   const user = await req.user;
@@ -263,8 +303,8 @@ const port = process.env.PORT;
 
 startApolloServer();
 
-app.listen(port, () => {
-  console.log(`🚀 Server running at: ${port}`);
+httpServer.listen(port, () => {
+  console.log(`🚀 SOCKET Server running at: ${port}`);
 });
 
 module.exports = app;
