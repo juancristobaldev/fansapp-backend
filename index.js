@@ -19,6 +19,8 @@ const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
 const { createServer } = require("http");
 
+const FlowApi = require("flowcl-node-api-client");
+
 app.use(
   session({
     resave: false,
@@ -186,8 +188,74 @@ app.post("/delete-files", (req, res) => {
   });
 });
 
-app.post("/flowPayment", (req, res) => {
-  console.log(req.body);
+app.post("/apiFlow/create_order", async (req, res) => {
+  const params = req.body;
+
+  const serviceName = "payment/create";
+
+  const flowApi = new FlowApi({
+    apiKey: process.env.API_KEY_FLOW,
+    secretKey: process.env.SECRET_KEY_FLOW,
+    apiURL: process.env.API_URL_SANDBOX_FLOW,
+  });
+
+  let response = await flowApi.send(serviceName, params, "POST");
+
+  redirect = response.url + "?token=" + response.token;
+
+  console.log(redirect);
+
+  res.json({
+    redirect,
+  });
+});
+
+app.post("/apiFlow/payment_confirm", async (req, res) => {
+  try {
+    let params = {
+      token: req.body.token,
+    };
+
+    let serviceName = "payment/getStatus";
+
+    const flowApi = new FlowApi({
+      apiKey: process.env.API_KEY_FLOW,
+      secretKey: process.env.SECRET_KEY_FLOW,
+      apiURL: process.env.API_URL_SANDBOX_FLOW,
+    });
+
+    let response = await flowApi.send(serviceName, params, "GET");
+
+    console.log("PAYMENT_STATUS", response);
+    res.send(response);
+  } catch (error) {
+    res.json({ error });
+  }
+});
+
+app.post("/apiFlow/return", async (req, res) => {
+  console.log(req);
+  res.redirect("http://localhost:3000/");
+});
+
+app.post("/apiFlow/result", async (req, res) => {
+  try {
+    let params = {
+      token: req.body.token,
+    };
+    let serviceName = "payment/getStatus";
+    const flowApi = new FlowApi({
+      apiKey: process.env.API_KEY_FLOW,
+      secretKey: process.env.SECRET_KEY_FLOW,
+      apiURL: process.env.API_URL_SANDBOX_FLOW,
+    });
+    let response = await flowApi.send(serviceName, params, "GET");
+    //Actualiza los datos en su sistema
+    console.log("API RESULT -> ", response);
+    res.send(response);
+  } catch (error) {
+    res.json({ error });
+  }
 });
 
 app.post(

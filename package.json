@@ -30,6 +30,7 @@
     "express-useragent": "^1.0.15",
     "express-validator": "^7.0.1",
     "ffmpeg-static": "^5.2.0",
+    "flowcl-node-api-client": "^1.1.6",
     "fs": "^0.0.1-security",
     "googleapis": "^126.0.1",
     "graphql-tools": "^9.0.0",
