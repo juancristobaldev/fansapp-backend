@@ -226,7 +226,7 @@ app.post("/apiFlow/payment_confirm", async (req, res) => {
 
     let response = await flowApi.send(serviceName, params, "GET");
 
-    console.log("PAYMENT_STATUS", response);
+    console.log("PAYMENT_STATUS _>", response);
     res.send(response);
   } catch (error) {
     res.json({ error });
