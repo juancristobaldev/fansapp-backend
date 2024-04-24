@@ -39,10 +39,11 @@ model users {
   theme           theme?
   notifications   notifications?
   sessions        sessions[]
+  shoppings       paids[]
 }
 
 model profile {
-  id          Int     @unique @default(autoincrement())
+  id          Int     @id @unique @default(autoincrement())
   linkProfile String? @db.Text
   photo       String? @db.Text
   description String? @db.Text
@@ -53,6 +54,23 @@ model profile {
   instagram   String? @db.Text
   userId      Int     @unique
   users       users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model paids {
+  id            Int      @id @unique @default(autoincrement())
+  flowOrder     Int      @unique
+  type          String   @db.VarChar(20)
+  paymentMethod String   @db.VarChar(20)
+  paymentDate   DateTime
+  createdDate   DateTime @default(now())
+  transferDate  DateTime
+  amount        Int
+  creator       creator  @relation(fields: [creatorId], references: [id])
+  creatorId     Int
+  user          users    @relation(fields: [usersId], references: [id])
+  usersId       Int
+  posts         posts?   @relation(fields: [postsId], references: [id])
+  postsId       Int?
 }
 
 model privacity {
@@ -140,6 +158,7 @@ model creator {
   dniFront    String         @db.Text
   dniBack     String         @db.Text
   details     details?
+  sales       paids[]
 }
 
 model bookmarkers {
@@ -176,6 +195,7 @@ model posts {
   comments    comments[]
   multimedia  multimedia[]
   bookmarkers bookmarkers[]
+  sales       paids[]
 }
 
 model likes {
