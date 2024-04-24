@@ -115,8 +115,10 @@ model suscriptions {
 
 model details {
   id          Int     @unique @default(autoincrement())
-  suscription Float   @default(4.99)
-  paidMessage Float   @default(9.99)
+  planIdMonth String? @db.VarChar(255)
+  planIdYear  String? @db.VarChar(255)
+  suscription Int     @default(5000)
+  paidMessage Int     @default(10000)
   title       String? @db.VarChar(70)
   description String? @db.VarChar(255)
   creator     creator @relation(fields: [creatorId], references: [id])

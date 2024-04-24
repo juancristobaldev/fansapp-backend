@@ -210,31 +210,13 @@ app.post("/apiFlow/create_order", async (req, res) => {
   });
 });
 
-app.post("/apiFlow/payment_confirm", async (req, res) => {
-  try {
-    let params = {
-      token: req.body.token,
-    };
+app.post("/apiFlow/create_suscription", async (req, res) => {
+  const params = req.body;
 
-    let serviceName = "payment/getStatus";
-
-    const flowApi = new FlowApi({
-      apiKey: process.env.API_KEY_FLOW,
-      secretKey: process.env.SECRET_KEY_FLOW,
-      apiURL: process.env.API_URL_SANDBOX_FLOW,
-    });
-
-    let response = await flowApi.send(serviceName, params, "GET");
-
-    console.log("PAYMENT_STATUS _>", response);
-    res.send(response);
-  } catch (error) {
-    res.json({ error });
-  }
+  console.log(params);
 });
 
 app.post("/apiFlow/return", async (req, res) => {
-  console.log(req);
   res.redirect("http://localhost:3000/");
 });
 
@@ -244,14 +226,19 @@ app.post("/apiFlow/result", async (req, res) => {
       token: req.body.token,
     };
     let serviceName = "payment/getStatus";
+
     const flowApi = new FlowApi({
       apiKey: process.env.API_KEY_FLOW,
       secretKey: process.env.SECRET_KEY_FLOW,
       apiURL: process.env.API_URL_SANDBOX_FLOW,
     });
+
     let response = await flowApi.send(serviceName, params, "GET");
     //Actualiza los datos en su sistema
     console.log("API RESULT -> ", response);
+
+    console.log("OPTIONAL ->", response.optional);
+
     res.send(response);
   } catch (error) {
     res.json({ error });
