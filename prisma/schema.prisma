@@ -39,7 +39,55 @@ model users {
   theme           theme?
   notifications   notifications?
   sessions        sessions[]
-  shoppings       paids[]
+  shoppings       sales[]
+  bags            bags[]
+}
+
+model plans {
+  id                        Int            @unique @default(autoincrement())
+  creator                   creator        @relation(fields: [creatorId], references: [id])
+  creatorId                 Int
+  createdAt                 DateTime?      @default(now())
+  amount                    Float?
+  yearlyAmount              Float?
+  yearlyAmountWithDiscount  Float?
+  monthlyAmountWithDiscount Float?
+  discount                  Int            @default(0)
+  yearlyVisibility          Boolean        @default(true)
+  visibility                Boolean        @default(true)
+  type                      String         @db.Char(10)
+  suscriptors               suscriptions[]
+  digitalProduct            digitalProduct @relation(fields: [digitalProductId], references: [id])
+  digitalProductId          Int            @unique
+}
+
+model digitalProduct {
+  id           Int           @unique @default(autoincrement())
+  creator      creator       @relation(fields: [creatorId], references: [id])
+  creatorId    Int
+  plan         plans?
+  post         posts?
+  paidMessages paidMessages?
+  sales        sales[]
+}
+
+model paidMessages {
+  id               Int            @unique @default(autoincrement())
+  amount           Float?
+  visibility       Boolean?       @default(true)
+  digitalProduct   digitalProduct @relation(fields: [digitalProductId], references: [id])
+  digitalProductId Int            @unique
+  creator          creator        @relation(fields: [creatorId], references: [id])
+  creatorId        Int            @unique
+}
+
+model bags {
+  id        Int     @id @unique @default(autoincrement())
+  creator   creator @relation(fields: [creatorId], references: [id])
+  creatorId Int
+  messages  Int     @default(5)
+  user      users   @relation(fields: [usersId], references: [id])
+  usersId   Int
 }
 
 model profile {
@@ -56,21 +104,23 @@ model profile {
   users       users   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model paids {
-  id            Int      @id @unique @default(autoincrement())
+model sales {
+  id            String   @id @unique @db.Char(10)
   flowOrder     Int      @unique
   type          String   @db.VarChar(20)
+  subject       String   @db.Text()
   paymentMethod String   @db.VarChar(20)
   paymentDate   DateTime
   createdDate   DateTime @default(now())
   transferDate  DateTime
-  amount        Int
+  amount        Float
   creator       creator  @relation(fields: [creatorId], references: [id])
   creatorId     Int
   user          users    @relation(fields: [usersId], references: [id])
   usersId       Int
-  posts         posts?   @relation(fields: [postsId], references: [id])
-  postsId       Int?
+
+  digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
+  digitalProductId Int             @unique
 }
 
 model privacity {
@@ -129,36 +179,29 @@ model suscriptions {
   createdAt DateTime  @default(now())
   deadDate  DateTime?
   price     Int?
-}
-
-model details {
-  id          Int     @unique @default(autoincrement())
-  planIdMonth String? @db.VarChar(255)
-  planIdYear  String? @db.VarChar(255)
-  suscription Int     @default(5000)
-  paidMessage Int     @default(10000)
-  title       String? @db.VarChar(70)
-  description String? @db.VarChar(255)
-  creator     creator @relation(fields: [creatorId], references: [id])
-  creatorId   Int     @unique
+  plans     plans?    @relation(fields: [plansId], references: [id])
+  plansId   Int?
 }
 
 model creator {
-  id          Int            @unique @default(autoincrement())
-  status      String         @default("pending") @db.VarChar(30)
-  likes       likes[]
-  suscriptors suscriptions[]
-  saveds      bookmarkers[]
-  userId      Int            @unique
-  user        users          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  country     String         @db.VarChar(60)
-  city        String         @db.VarChar(60)
-  address     String         @db.VarChar(60)
-  zipCode     String         @db.VarChar(60)
-  dniFront    String         @db.Text
-  dniBack     String         @db.Text
-  details     details?
-  sales       paids[]
+  id             Int              @unique @default(autoincrement())
+  status         String           @default("pending") @db.VarChar(30)
+  likes          likes[]
+  suscriptors    suscriptions[]
+  saveds         bookmarkers[]
+  userId         Int              @unique
+  user           users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country        String           @db.VarChar(60)
+  city           String           @db.VarChar(60)
+  address        String           @db.VarChar(60)
+  zipCode        String           @db.VarChar(60)
+  dniFront       String           @db.Text
+  dniBack        String           @db.Text
+  sales          sales[]
+  digitalProduct digitalProduct[]
+  plans          plans[]
+  bags           bags[]
+  paidMessages   paidMessages?
 }
 
 model bookmarkers {
@@ -183,19 +226,21 @@ model multimedia {
 }
 
 model posts {
-  id          Int           @unique @default(autoincrement())
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime?     @updatedAt
-  description String?       @db.VarChar(200)
-  location    String?       @db.Text()
-  privacity   String        @default("suscriptors") @db.VarChar(15)
-  usersId     Int?
-  users       users?        @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  likes       likes[]
-  comments    comments[]
-  multimedia  multimedia[]
-  bookmarkers bookmarkers[]
-  sales       paids[]
+  id               Int             @unique @default(autoincrement())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime?       @updatedAt
+  amount           Float?
+  description      String?         @db.VarChar(200)
+  location         String?         @db.Text()
+  privacity        String          @default("suscriptors") @db.VarChar(15)
+  usersId          Int?
+  users            users?          @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  likes            likes[]
+  comments         comments[]
+  multimedia       multimedia[]
+  bookmarkers      bookmarkers[]
+  digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
+  digitalProductId Int?            @unique
 }
 
 model likes {

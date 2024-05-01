@@ -18,8 +18,7 @@ const { exec } = require("child_process");
 const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
 const { createServer } = require("http");
-
-const FlowApi = require("flowcl-node-api-client");
+const flowRoutes = require("./lib/routes/flow");
 
 app.use(
   session({
@@ -171,6 +170,8 @@ async function startApolloServer() {
   server.applyMiddleware({ app });
 }
 
+app.use("/apiFlow", flowRoutes);
+
 app.post("/delete-files", (req, res) => {
   console.log("delete");
   req.body.forEach((paths) => {
@@ -186,63 +187,6 @@ app.post("/delete-files", (req, res) => {
       });
     }
   });
-});
-
-app.post("/apiFlow/create_order", async (req, res) => {
-  const params = req.body;
-
-  const serviceName = "payment/create";
-
-  const flowApi = new FlowApi({
-    apiKey: process.env.API_KEY_FLOW,
-    secretKey: process.env.SECRET_KEY_FLOW,
-    apiURL: process.env.API_URL_SANDBOX_FLOW,
-  });
-
-  let response = await flowApi.send(serviceName, params, "POST");
-
-  redirect = response.url + "?token=" + response.token;
-
-  console.log(redirect);
-
-  res.json({
-    redirect,
-  });
-});
-
-app.post("/apiFlow/create_suscription", async (req, res) => {
-  const params = req.body;
-
-  console.log(params);
-});
-
-app.post("/apiFlow/return", async (req, res) => {
-  res.redirect("http://localhost:3000/");
-});
-
-app.post("/apiFlow/result", async (req, res) => {
-  try {
-    let params = {
-      token: req.body.token,
-    };
-    let serviceName = "payment/getStatus";
-
-    const flowApi = new FlowApi({
-      apiKey: process.env.API_KEY_FLOW,
-      secretKey: process.env.SECRET_KEY_FLOW,
-      apiURL: process.env.API_URL_SANDBOX_FLOW,
-    });
-
-    let response = await flowApi.send(serviceName, params, "GET");
-    //Actualiza los datos en su sistema
-    console.log("API RESULT -> ", response);
-
-    console.log("OPTIONAL ->", response.optional);
-
-    res.send(response);
-  } catch (error) {
-    res.json({ error });
-  }
 });
 
 app.post(
