@@ -36,11 +36,23 @@ model users {
   creator         creator?
   privacity       privacity?
   blockeds        blockeds[]
+  customer        customer?
   theme           theme?
   notifications   notifications?
   sessions        sessions[]
-  shoppings       sales[]
   bags            bags[]
+}
+
+model customer {
+  id              Int       @unique @default(autoincrement())
+  customerId      String    @unique @db.VarChar(30)
+  last4CardDigits Int?
+  status          Int?
+  createdAt       DateTime? @default(now())
+  registerDate    DateTime?
+  user            users     @relation(fields: [userId], references: [id])
+  userId          Int       @unique
+  shopping        sales[]
 }
 
 model plans {
@@ -48,6 +60,7 @@ model plans {
   creator                   creator        @relation(fields: [creatorId], references: [id])
   creatorId                 Int
   createdAt                 DateTime?      @default(now())
+  updateAt                  DateTime?
   amount                    Float?
   yearlyAmount              Float?
   yearlyAmountWithDiscount  Float?
@@ -105,22 +118,18 @@ model profile {
 }
 
 model sales {
-  id            String   @id @unique @db.Char(10)
-  flowOrder     Int      @unique
-  type          String   @db.VarChar(20)
-  subject       String   @db.Text()
-  paymentMethod String   @db.VarChar(20)
-  paymentDate   DateTime
-  createdDate   DateTime @default(now())
-  transferDate  DateTime
-  amount        Float
-  creator       creator  @relation(fields: [creatorId], references: [id])
-  creatorId     Int
-  user          users    @relation(fields: [usersId], references: [id])
-  usersId       Int
-
+  id               String          @id @unique @db.VarChar(15)
+  status           Int             @default(1)
+  subject          String          @db.Text()
+  paymentMethod    String?         @db.VarChar(20)
+  paymentDate      DateTime?
+  createdDate      DateTime?       @default(now())
+  transferDate     DateTime?
+  amount           Float
+  customer         customer        @relation(fields: [customerId], references: [id])
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
-  digitalProductId Int             @unique
+  digitalProductId Int
+  customerId       Int
 }
 
 model privacity {
@@ -197,7 +206,6 @@ model creator {
   zipCode        String           @db.VarChar(60)
   dniFront       String           @db.Text
   dniBack        String           @db.Text
-  sales          sales[]
   digitalProduct digitalProduct[]
   plans          plans[]
   bags           bags[]
