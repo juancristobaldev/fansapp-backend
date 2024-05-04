@@ -181,6 +181,7 @@ model theme {
 
 model suscriptions {
   id        Int       @unique @default(autoincrement())
+  status    Int?      @default(1)
   user      users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int?
   creator   creator?  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
