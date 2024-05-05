@@ -19,6 +19,7 @@ const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
 const { createServer } = require("http");
 const flowRoutes = require("./lib/routes/flow");
+const { initializeSocketIo, getIo } = require("./lib/socket");
 
 app.use(
   session({
@@ -31,23 +32,16 @@ app.use(
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true, // Si estás enviando cookies o credenciales en tus solicitudes
-  })
-);
+app.use(cors());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.set("trust proxy", true); // Confía en las cabeceras de proxy
 app.use(useragent.express());
 
 const httpServer = createServer(app);
 
-const io = require("socket.io")(httpServer, {
-  cors: {
-    origin: "*",
-  },
-});
+initializeSocketIo(httpServer);
+
+const io = getIo();
 
 io.on("connection", (socket) => {
   console.log("connected");
