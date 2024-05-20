@@ -41,6 +41,8 @@ model users {
   notifications   notifications?
   sessions        sessions[]
   bags            bags[]
+  wallet          wallet?
+  movements       movements[]
 }
 
 model customer {
@@ -92,6 +94,24 @@ model paidMessages {
   digitalProductId Int            @unique
   creator          creator        @relation(fields: [creatorId], references: [id])
   creatorId        Int            @unique
+}
+
+model wallet {
+  id     Int   @unique @default(autoincrement())
+  amount Float
+  user   users @relation(fields: [userId], references: [id])
+  userId Int   @unique
+}
+
+model movements {
+  id        Int      @unique @default(autoincrement())
+  amount    Float
+  type      String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  receiver  creator? @relation(fields: [creatorId], references: [id])
+  user      users    @relation(fields: [userId], references: [id])
+  userId    Int
+  creatorId Int?
 }
 
 model bags {
@@ -211,6 +231,7 @@ model creator {
   plans          plans[]
   bags           bags[]
   paidMessages   paidMessages?
+  movements      movements[]
 }
 
 model bookmarkers {
