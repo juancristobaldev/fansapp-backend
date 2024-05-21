@@ -244,7 +244,7 @@ app.post(
           process.env.ENVIROMENT === "production"
             ? process.env.URL_PRODUCTION
             : process.env.URL_DEVELOPMENT
-        }`,
+        }/delete-files`,
         {
           method: "POST",
           headers: {
