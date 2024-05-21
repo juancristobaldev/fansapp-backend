@@ -199,7 +199,7 @@ app.post(
 
     const paths = req.compressedFiles;
 
-    console.log(paths);
+    console.log("paths->", paths);
 
     if (paths.length) {
       let prismaMedias;
@@ -212,9 +212,11 @@ app.post(
           usersId: parseInt(user),
         }));
 
-        await prisma.multimedia.createMany({
+        const posts = await prisma.multimedia.createMany({
           data: multimedias,
         });
+
+        console.log("multimedias =>", posts);
 
         prismaMedias = await prisma.multimedia.findMany({
           where: {
@@ -253,6 +255,8 @@ app.post(
           body: JSON.stringify(paths),
         }
       );
+
+      console.log("RESPONSE ->", response);
 
       if (response.status === 200) {
         res.json({
