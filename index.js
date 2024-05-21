@@ -239,13 +239,20 @@ app.post(
         }
       }
 
-      const response = await fetch("http://localhost:3001/delete-files", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(paths),
-      });
+      const response = await fetch(
+        `${
+          process.env.ENVIROMENT === "production"
+            ? process.env.URL_PRODUCTION
+            : process.env.URL_DEVELOPMENT
+        }`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(paths),
+        }
+      );
 
       if (response.status === 200) {
         res.json({
