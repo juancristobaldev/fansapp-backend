@@ -29,7 +29,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
@@ -81,44 +81,51 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer();
 
 const compressFilesMiddleware = async (req, res, next) => {
   const compressVideo = (file) => {
     try {
-      const inputFilePath = file.path;
-      const outputFilePath = `${file.destination}compressed-${file.filename}`;
+      const buffer = file.buffer;
 
-      const command = `${ffmpeg} -i ${inputFilePath} -vf scale=640:480 -c:v libx265 -crf 28 -b:v 1M -c:a aac -b:a 128k ${outputFilePath}`;
-      exec(command, (error) => {
-        if (error) console.error(error);
-      });
+      const command = `${ffmpeg} -i -vf scale=640:480 -c:v libx265 -crf 28 -b:v 1M -c:a aac -b:a 128k -f mp4 pipe:1`;
 
-      return {
-        deleteFilePath: path.join("uploads", file.filename),
-        outputFilePath,
-        type: "video",
-      };
+      const ffmpegProcess = exec(
+        command,
+        { encoding: "buffer" },
+        (error, stdout, stderr) => {
+          if (error) {
+            console.error("Error al comprimir el video:", stderr);
+            reject(error);
+            return;
+          }
+
+          resolve({
+            blob: stdout,
+            type: "video",
+          });
+        }
+      );
+
+      ffmpegProcess.stdin(buffer);
+      ffmpegProcess.stdin.end();
     } catch (error) {
-      console.error(error);
-      throw error;
+      console.error("Error al comprimir el video:", error);
+      reject(error);
     }
   };
 
-  const compressImage = (file) => {
+  const compressImage = async (file) => {
     try {
-      const inputFilePath = file.path;
-      const outputFilePath = `${file.destination}compressed-${file.filename}`;
+      const buffer = file.buffer;
 
-      sharp(inputFilePath)
+      const blob = await sharp(buffer)
         .resize() // Ajusta el tamaño de la imagen según sea necesario
-        .toFile(outputFilePath, (error) => {
-          if (error) console.error("error", error);
-        });
+        .jpeg({ quality: 50 })
+        .toBuffer();
 
       return {
-        deleteFilePath: path.join("uploads", file.filename),
-        outputFilePath,
+        blob: blob,
         type: "image",
       };
     } catch (error) {
@@ -142,6 +149,9 @@ const compressFilesMiddleware = async (req, res, next) => {
 
     const compressedFiles = await Promise.all(compressPromises);
     req.compressedFiles = compressedFiles;
+
+    console.log(compressedFiles);
+
     next();
   } catch (error) {
     console.error(error);
@@ -197,71 +207,74 @@ app.post(
 
     const { to, id, user } = req.body;
 
-    const paths = req.compressedFiles;
+    const blobs = req.compressedFiles;
 
-    console.log("paths->", paths);
-
-    if (paths.length) {
+    if (blobs.length) {
       let prismaMedias;
 
+      const errors = [];
+
+      console.log("BLOBS", blobs);
+
       if (to === "post") {
-        const multimedias = paths.map((multimedia) => ({
+        const multimedias = blobs.map((multimedia) => ({
           type: multimedia.type,
-          source: multimedia.outputFilePath,
+          source: multimedia.blob,
           postsId: parseInt(id),
           usersId: parseInt(user),
         }));
 
-        const posts = await prisma.multimedia.createMany({
-          data: multimedias,
-        });
+        const posts = await prisma.multimedia
+          .createMany({
+            data: multimedias,
+          })
+          .catch((err) => errors.push(err));
 
         console.log("multimedias =>", posts);
 
-        prismaMedias = await prisma.multimedia.findMany({
-          where: {
-            postsId: parseInt(id),
-          },
-        });
+        prismaMedias = await prisma.multimedia
+          .findMany({
+            where: {
+              postsId: parseInt(id),
+            },
+          })
+          .catch((err) => errors.push(err));
       } else if (to === "frontPage" || to === "photo") {
-        const profile = await prisma.profile.findUnique({
-          where: {
-            userId: parseInt(user),
-          },
-        });
-
-        if (to === "frontPage") {
-          if (profile.frontPage) {
-            fs.unlinkSync(profile.frontPage);
-          }
+        console.log(to);
+        if (to === "photo") {
+          await prisma.profile
+            .update({
+              data: {
+                photo: blobs[0].blob,
+              },
+              where: {
+                userId: parseInt(user),
+              },
+            })
+            .then((data) => {
+              console.log(data);
+            })
+            .catch((err) => errors.push(err));
         } else {
-          if (profile.photo) {
-            fs.unlinkSync(profile.photo);
-          }
+          await prisma.profile
+            .update({
+              data: {
+                frontPage: blobs[0].blob,
+              },
+              where: {
+                userId: parseInt(user),
+              },
+            })
+            .catch((err) => errors.push(err));
         }
       }
 
-      const response = await fetch(
-        `${
-          process.env.ENVIROMENT === "production"
-            ? process.env.URL_PRODUCTION
-            : process.env.URL_DEVELOPMENT
-        }/delete-files`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paths),
-        }
-      );
+      console.log(errors);
 
-      console.log("RESPONSE ->", response);
-
-      if (response.status === 200) {
+      if (!errors.length) {
         res.json({
           success: true,
-          paths: paths,
+          blobs: blobs,
           multimedias: prismaMedias,
         });
       } else {

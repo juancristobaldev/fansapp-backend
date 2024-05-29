@@ -34,6 +34,7 @@
     "flowcl-node-api-client": "^1.1.6",
     "fs": "^0.0.1-security",
     "googleapis": "^126.0.1",
+    "graphql": "^16.8.1",
     "graphql-tools": "^9.0.0",
     "graphql-upload": "^13.0.0",
     "install": "^0.13.0",

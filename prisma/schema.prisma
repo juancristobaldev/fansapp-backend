@@ -5,6 +5,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator graphql {
+  provider = "prisma/graphql"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
@@ -41,8 +45,6 @@ model users {
   notifications   notifications?
   sessions        sessions[]
   bags            bags[]
-  wallet          wallet?
-  movements       movements[]
 }
 
 model customer {
@@ -55,6 +57,7 @@ model customer {
   user            users     @relation(fields: [userId], references: [id])
   userId          Int       @unique
   shopping        sales[]
+  wallet          wallet?
 }
 
 model plans {
@@ -97,10 +100,11 @@ model paidMessages {
 }
 
 model wallet {
-  id     Int   @unique @default(autoincrement())
-  amount Float
-  user   users @relation(fields: [userId], references: [id])
-  userId Int   @unique
+  id         Int         @unique @default(autoincrement())
+  amount     Float
+  movements  movements[]
+  customer   customer    @relation(fields: [customerId], references: [id])
+  customerId Int         @unique
 }
 
 model movements {
@@ -109,9 +113,9 @@ model movements {
   type      String   @db.VarChar(30)
   createdAt DateTime @default(now())
   receiver  creator? @relation(fields: [creatorId], references: [id])
-  user      users    @relation(fields: [userId], references: [id])
-  userId    Int
   creatorId Int?
+  wallet    wallet   @relation(fields: [walletId], references: [id])
+  walletId  Int
 }
 
 model bags {
@@ -126,11 +130,11 @@ model bags {
 model profile {
   id          Int     @id @unique @default(autoincrement())
   linkProfile String? @db.Text
-  photo       String? @db.Text
+  photo       Bytes?
   description String? @db.Text
   location    String? @db.Text
   language    String? @db.Text
-  frontPage   String? @db.Text
+  frontPage   Bytes?
   tiktok      String? @db.Text
   instagram   String? @db.Text
   userId      Int     @unique
@@ -225,8 +229,8 @@ model creator {
   city           String           @db.VarChar(60)
   address        String           @db.VarChar(60)
   zipCode        String           @db.VarChar(60)
-  dniFront       String           @db.Text
-  dniBack        String           @db.Text
+  dniFront       Bytes
+  dniBack        Bytes
   digitalProduct digitalProduct[]
   plans          plans[]
   bags           bags[]
@@ -247,7 +251,7 @@ model bookmarkers {
 
 model multimedia {
   id      Int    @unique @default(autoincrement())
-  source  String @db.Text
+  source  Bytes
   type    String @db.VarChar(10)
   posts   posts? @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId Int?
