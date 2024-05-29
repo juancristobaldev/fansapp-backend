@@ -154,7 +154,6 @@ const compressFilesMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error(error);
     res.status(500).send("error al comprimir archivos.");
   }
 };
