@@ -238,34 +238,6 @@ app.post(
             },
           })
           .catch((err) => errors.push(err));
-      } else if (to === "frontPage" || to === "photo") {
-        console.log(to);
-        if (to === "photo") {
-          await prisma.profile
-            .update({
-              data: {
-                photo: blobs[0].blob,
-              },
-              where: {
-                userId: parseInt(user),
-              },
-            })
-            .then((data) => {
-              console.log(data);
-            })
-            .catch((err) => errors.push(err));
-        } else {
-          await prisma.profile
-            .update({
-              data: {
-                frontPage: blobs[0].blob,
-              },
-              where: {
-                userId: parseInt(user),
-              },
-            })
-            .catch((err) => errors.push(err));
-        }
       }
 
       console.log(errors);
