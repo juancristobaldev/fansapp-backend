@@ -198,7 +198,7 @@ app.post("/delete-files", (req, res) => {
 });
 
 app.post(
-  "/upload-files",
+  "/compress-files",
   upload.array("files"),
   compressFilesMiddleware,
   async (req, res) => {
@@ -214,33 +214,6 @@ app.post(
       const errors = [];
 
       console.log("BLOBS", blobs);
-
-      if (to === "post") {
-        const multimedias = blobs.map((multimedia) => ({
-          type: multimedia.type,
-          source: multimedia.blob,
-          postsId: parseInt(id),
-          usersId: parseInt(user),
-        }));
-
-        const posts = await prisma.multimedia
-          .createMany({
-            data: multimedias,
-          })
-          .catch((err) => errors.push(err));
-
-        console.log("multimedias =>", posts);
-
-        prismaMedias = await prisma.multimedia
-          .findMany({
-            where: {
-              postsId: parseInt(id),
-            },
-          })
-          .catch((err) => errors.push(err));
-      }
-
-      console.log(errors);
 
       if (!errors.length) {
         res.json({
