@@ -209,8 +209,6 @@ app.post(
     const blobs = req.compressedFiles;
 
     if (blobs.length) {
-      let prismaMedias;
-
       const errors = [];
 
       console.log("BLOBS", blobs);
@@ -219,7 +217,6 @@ app.post(
         res.json({
           success: true,
           blobs: blobs,
-          multimedias: prismaMedias,
         });
       } else {
         res.json({
