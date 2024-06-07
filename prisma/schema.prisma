@@ -26,6 +26,7 @@ model users {
   updateAt        DateTime?      @updatedAt
   updateFirstName Boolean        @default(false)
   updateLastName  Boolean        @default(false)
+  rol             String?        @default("customer") @db.VarChar(20)
   profile         profile?
   likes           likes[]
   posts           posts[]
@@ -126,11 +127,11 @@ model bags {
 model profile {
   id          Int     @id @unique @default(autoincrement())
   linkProfile String? @db.Text
-  photo       Bytes?
+  photo       String? @db.Text
   description String? @db.Text
   location    String? @db.Text
   language    String? @db.Text
-  frontPage   Bytes?
+  frontPage   String? @db.Text
   tiktok      String? @db.Text
   instagram   String? @db.Text
   userId      Int     @unique
@@ -247,7 +248,7 @@ model bookmarkers {
 
 model multimedia {
   id      Int    @unique @default(autoincrement())
-  source  Bytes
+  source  String @db.Text
   type    String @db.VarChar(10)
   posts   posts? @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId Int?

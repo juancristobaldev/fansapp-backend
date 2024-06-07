@@ -20,6 +20,16 @@ const fs = require("fs");
 const { createServer } = require("http");
 const flowRoutes = require("./lib/routes/flow");
 const { initializeSocketIo, getIo } = require("./lib/socket");
+const {
+  S3Client,
+  ListBucketsCommand,
+  PutObjectCommand,
+} = require("@aws-sdk/client-s3");
+const { file } = require("googleapis/build/src/apis/file");
+const { v4 } = require("uuid");
+const initS3Client = require("./lib/aws3Functions");
+
+const client = initS3Client();
 
 app.use(
   session({
@@ -68,70 +78,64 @@ io.on("connection", (socket) => {
 });
 
 const prisma = new PrismaClient();
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(
-      null,
-      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-    );
-  },
-});
-
 const upload = multer();
 
 const compressFilesMiddleware = async (req, res, next) => {
   const compressVideo = (file) => {
-    try {
-      const buffer = file.buffer;
+    return new Promise((resolve, reject) => {
+      try {
+        console.log(file);
+        const buffer = file.buffer;
 
-      const command = `${ffmpeg} -i -vf scale=640:480 -c:v libx265 -crf 28 -b:v 1M -c:a aac -b:a 128k -f mp4 pipe:1`;
+        const command = `${ffmpeg} -i -vf scale=640:480 -c:v libx265 -crf 28 -b:v 1M -c:a aac -b:a 128k -f mp4 pipe:1`;
 
-      const ffmpegProcess = exec(
-        command,
-        { encoding: "buffer" },
-        (error, stdout, stderr) => {
-          if (error) {
-            console.error("Error al comprimir el video:", stderr);
-            reject(error);
-            return;
+        const ffmpegProcess = exec(
+          command,
+          { encoding: "buffer" },
+          (error, stdout, stderr) => {
+            if (error) {
+              console.error("Error al comprimir el video:", stderr);
+              reject(error);
+              return;
+            }
+            console.log("video comprimido:", stdout);
+            resolve({
+              blob: stdout,
+              type: file.mimetype,
+              name: file.originalname,
+            });
           }
+        );
 
-          resolve({
-            blob: stdout,
-            type: "video",
-          });
-        }
-      );
-
-      ffmpegProcess.stdin(buffer);
-      ffmpegProcess.stdin.end();
-    } catch (error) {
-      console.error("Error al comprimir el video:", error);
-      reject(error);
-    }
+        ffmpegProcess.stdin(buffer);
+        ffmpegProcess.stdin.end();
+      } catch (error) {
+        console.error("Error al comprimir el video:", error);
+        reject(error);
+      }
+    });
   };
 
   const compressImage = async (file) => {
-    try {
-      const buffer = file.buffer;
-
-      const blob = await sharp(buffer)
-        .resize() // Ajusta el tamaño de la imagen según sea necesario
-        .jpeg({ quality: 50 })
-        .toBuffer();
-
-      return {
-        blob: blob,
-        type: "image",
-      };
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+    return new Promise(async (resolve, reject) => {
+      try {
+        const buffer = file.buffer;
+        console.log(file);
+        const blob = await sharp(buffer)
+          .resize() // Ajusta el tamaño de la imagen según sea necesario
+          .jpeg({ quality: 50 })
+          .toBuffer();
+        console.log("Imagen comprimida:", blob);
+        resolve({
+          blob: blob,
+          type: file.mimetype,
+          name: file.originalname,
+        });
+      } catch (error) {
+        console.error("Error al comprimir la imagen:", error);
+        reject(error);
+      }
+    });
   };
 
   try {
@@ -148,9 +152,9 @@ const compressFilesMiddleware = async (req, res, next) => {
     });
 
     const compressedFiles = await Promise.all(compressPromises);
-    req.compressedFiles = compressedFiles;
 
-    console.log(compressedFiles);
+    console.log("COMPRESSED FILES ->", compressedFiles);
+    req.compressedFiles = compressedFiles;
 
     next();
   } catch (error) {
@@ -198,31 +202,85 @@ app.post("/delete-files", (req, res) => {
 });
 
 app.post(
-  "/compress-files",
+  "/upload-files",
   upload.array("files"),
   compressFilesMiddleware,
   async (req, res) => {
-    console.log("BODY", req.body);
-
-    const { to, id, user } = req.body;
-
+    const { to, id, userId } = req.body;
     const blobs = req.compressedFiles;
 
-    if (blobs.length) {
-      const errors = [];
-
-      console.log("BLOBS", blobs);
-
-      if (!errors.length) {
-        res.json({
-          success: true,
-          blobs: blobs,
-        });
-      } else {
-        res.json({
-          success: false,
-        });
+    const uploadFileToSw3 = async (uploadParams) => {
+      try {
+        const data = await client.send(new PutObjectCommand(uploadParams));
+        console.log("Archivo subido a S3:", data);
+        return data;
+      } catch (error) {
+        console.log("ERROR:", error);
+        reject(error);
       }
+    };
+
+    let pathsSw3 = [];
+
+    for (const buffer of blobs) {
+      try {
+        const key = `${v4() + buffer.name}`;
+        const uploadParams = {
+          Key: key,
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Body: buffer.blob, // Ruta local del archivo a subir
+          ContentType: buffer.type, // Por ejemplo, "video/mp4"
+        };
+
+        const data = await uploadFileToSw3(uploadParams);
+
+        if (data[`$metadata`].httpStatusCode == 200) {
+          pathsSw3.push({
+            key,
+            type: buffer.type.includes("image") ? "image" : "video",
+          });
+        }
+      } catch (error) {
+        console.error("Error al subir un archivo a S3:", error);
+      }
+    }
+
+    if (pathsSw3.length) {
+      if (to === "multimedia") {
+        const multimediasID = [];
+
+        for (const pathSw3 of pathsSw3) {
+          try {
+            multimedia = await prisma.multimedia.create({
+              data: {
+                source: pathSw3.key,
+                type: pathSw3.type,
+                usersId: id,
+              },
+            });
+
+            console.log("multimedia creado:", multimedia);
+
+            if (multimedia) multimediasID.push(multimedia.id);
+          } catch (error) {
+            console.log(error);
+          }
+        }
+
+        if (multimediasID.length) {
+          pathsSw3 = multimediasID;
+        }
+      }
+
+      res.send({
+        sw3Items: pathsSw3,
+        success: true,
+      });
+    } else {
+      res.send({
+        sw3Items: [],
+        success: false,
+      });
     }
   }
 );
