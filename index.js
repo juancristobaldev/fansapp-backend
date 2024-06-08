@@ -251,11 +251,13 @@ app.post(
 
         for (const pathSw3 of pathsSw3) {
           try {
+            console.log(userId);
+
             multimedia = await prisma.multimedia.create({
               data: {
                 source: pathSw3.key,
                 type: pathSw3.type,
-                usersId: id,
+                usersId: parseInt(userId),
               },
             });
 

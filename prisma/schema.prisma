@@ -51,7 +51,7 @@ model customer {
   status          Int?
   createdAt       DateTime? @default(now())
   registerDate    DateTime?
-  user            users     @relation(fields: [userId], references: [id])
+  user            users     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          Int       @unique
   shopping        sales[]
   wallet          wallet?
@@ -59,7 +59,7 @@ model customer {
 
 model plans {
   id                        Int            @unique @default(autoincrement())
-  creator                   creator        @relation(fields: [creatorId], references: [id])
+  creator                   creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId                 Int
   createdAt                 DateTime?      @default(now())
   updateAt                  DateTime?
@@ -78,7 +78,7 @@ model plans {
 
 model digitalProduct {
   id           Int           @unique @default(autoincrement())
-  creator      creator       @relation(fields: [creatorId], references: [id])
+  creator      creator       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId    Int
   plan         plans?
   post         posts?
@@ -90,9 +90,9 @@ model paidMessages {
   id               Int            @unique @default(autoincrement())
   amount           Float?
   visibility       Boolean?       @default(true)
-  digitalProduct   digitalProduct @relation(fields: [digitalProductId], references: [id])
+  digitalProduct   digitalProduct @relation(fields: [digitalProductId], references: [id], onDelete: Cascade)
   digitalProductId Int            @unique
-  creator          creator        @relation(fields: [creatorId], references: [id])
+  creator          creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId        Int            @unique
 }
 
@@ -100,7 +100,7 @@ model wallet {
   id         Int         @unique @default(autoincrement())
   amount     Float
   movements  movements[]
-  customer   customer    @relation(fields: [customerId], references: [id])
+  customer   customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId Int         @unique
 }
 
@@ -217,6 +217,8 @@ model suscriptions {
 model creator {
   id             Int              @unique @default(autoincrement())
   status         String           @default("pending") @db.VarChar(30)
+  approbedDate   DateTime?
+  requestDate    DateTime?
   likes          likes[]
   suscriptors    suscriptions[]
   saveds         bookmarkers[]
@@ -226,8 +228,8 @@ model creator {
   city           String           @db.VarChar(60)
   address        String           @db.VarChar(60)
   zipCode        String           @db.VarChar(60)
-  dniFront       Bytes
-  dniBack        Bytes
+  dniFront       String           @db.Text
+  dniBack        String           @db.Text
   digitalProduct digitalProduct[]
   plans          plans[]
   bags           bags[]
@@ -280,7 +282,7 @@ model likes {
   usersId   Int
   media     posts    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   mediaId   Int
-  creator   creator? @relation(fields: [creatorId], references: [id])
+  creator   creator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId Int?
 }
 
