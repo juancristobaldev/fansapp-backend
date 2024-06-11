@@ -27,7 +27,7 @@ const {
 } = require("@aws-sdk/client-s3");
 const { file } = require("googleapis/build/src/apis/file");
 const { v4 } = require("uuid");
-const initS3Client = require("./lib/aws3Functions");
+const { initS3Client } = require("./lib/aws3Functions");
 
 const client = initS3Client();
 
