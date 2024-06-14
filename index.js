@@ -125,10 +125,17 @@ const compressFilesMiddleware = async (req, res, next) => {
           .resize() // Ajusta el tamaño de la imagen según sea necesario
           .jpeg({ quality: 50 })
           .toBuffer();
-        console.log("Imagen comprimida:", blob);
+
+        const blur = await sharp(buffer)
+          .resize()
+          .jpeg({ quality: 50 })
+          .blur(8)
+          .toBuffer();
+
         resolve({
           blob: blob,
           type: file.mimetype,
+          blur: blur,
           name: file.originalname,
         });
       } catch (error) {
@@ -232,14 +239,34 @@ app.post(
           ContentType: buffer.type, // Por ejemplo, "video/mp4"
         };
 
+        const blurParams = {
+          Key: `blur-${key}`,
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Body: buffer.blur, // Ruta local del archivo a subir
+          ContentType: buffer.type, // Por ejemplo, "video/mp4"
+        };
+
         const data = await uploadFileToSw3(uploadParams);
+        const blur = await uploadFileToSw3(blurParams);
+
+        let newPathsSw3 = {};
 
         if (data[`$metadata`].httpStatusCode == 200) {
-          pathsSw3.push({
+          newPathsSw3 = {
+            ...newPathsSw3,
             key,
             type: buffer.type.includes("image") ? "image" : "video",
-          });
+          };
         }
+
+        if (blur[`$metadata`].httpStatusCode == 200) {
+          newPathsSw3 = {
+            ...newPathsSw3,
+            blur: `blur-${key}`,
+          };
+        }
+        console.log("newPathsSw3 -> ", newPathsSw3);
+        pathsSw3.push(newPathsSw3);
       } catch (error) {
         console.error("Error al subir un archivo a S3:", error);
       }
@@ -258,6 +285,7 @@ app.post(
                 source: pathSw3.key,
                 type: pathSw3.type,
                 usersId: parseInt(userId),
+                blur: pathSw3.blur ? pathSw3.blur : null,
               },
             });
 

@@ -249,12 +249,13 @@ model bookmarkers {
 }
 
 model multimedia {
-  id      Int    @unique @default(autoincrement())
-  source  String @db.Text
-  type    String @db.VarChar(10)
-  posts   posts? @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  id      Int     @unique @default(autoincrement())
+  source  String  @db.Text
+  blur    String? @db.Text
+  type    String  @db.VarChar(10)
+  posts   posts?  @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId Int?
-  users   users? @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  users   users?  @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId Int?
 }
 
