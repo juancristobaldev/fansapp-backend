@@ -129,7 +129,7 @@ const compressFilesMiddleware = async (req, res, next) => {
         const blur = await sharp(buffer)
           .resize()
           .jpeg({ quality: 50 })
-          .blur(25)
+          .blur(50)
           .toBuffer();
 
         resolve({
