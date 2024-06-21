@@ -106,14 +106,17 @@ model wallet {
 }
 
 model movements {
-  id               Int      @unique @default(autoincrement())
-  amount           Float
-  type             String   @db.VarChar(30)
-  createdAt        DateTime @default(now())
-  wallet           wallet   @relation(fields: [walletId], references: [id])
+  id        Int      @unique @default(autoincrement())
+  amount    Float
+  type      String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+
+  wallet           wallet  @relation(fields: [walletId], references: [id])
   walletId         Int
-  receiverWallet   wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
+  receiverWallet   wallet? @relation("receiverWallet", fields: [receiverWalletId], references: [id])
   receiverWalletId Int?
+
+  sales sales?
 }
 
 model bags {
@@ -152,6 +155,8 @@ model sales {
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?
   customerId       Int
+  movements        movements?      @relation(fields: [movementsId], references: [id])
+  movementsId      Int?            @unique
 }
 
 model privacity {
