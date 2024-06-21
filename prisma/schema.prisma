@@ -114,8 +114,6 @@ model movements {
   walletId         Int
   receiverWallet   wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
   receiverWalletId Int?
-  creator          creator? @relation(fields: [creatorId], references: [id])
-  creatorId        Int?
 }
 
 model bags {
@@ -237,7 +235,6 @@ model creator {
   plans          plans[]
   bags           bags[]
   paidMessages   paidMessages?
-  revenues       movements[]
 }
 
 model bookmarkers {
