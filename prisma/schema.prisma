@@ -102,17 +102,20 @@ model wallet {
   movements  movements[]
   customer   customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId Int         @unique
+  revenue    movements[] @relation("receiverWallet")
 }
 
 model movements {
-  id        Int      @unique @default(autoincrement())
-  amount    Float
-  type      String   @db.VarChar(30)
-  createdAt DateTime @default(now())
-  receiver  creator? @relation(fields: [creatorId], references: [id])
-  creatorId Int?
-  wallet    wallet   @relation(fields: [walletId], references: [id])
-  walletId  Int
+  id               Int      @unique @default(autoincrement())
+  amount           Float
+  type             String   @db.VarChar(30)
+  createdAt        DateTime @default(now())
+  wallet           wallet   @relation(fields: [walletId], references: [id])
+  walletId         Int
+  receiverWallet   wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
+  receiverWalletId Int?
+  creator          creator? @relation(fields: [creatorId], references: [id])
+  creatorId        Int?
 }
 
 model bags {
@@ -149,7 +152,7 @@ model sales {
   amount           Float
   customer         customer        @relation(fields: [customerId], references: [id])
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
-  digitalProductId Int
+  digitalProductId Int?
   customerId       Int
 }
 
@@ -234,7 +237,7 @@ model creator {
   plans          plans[]
   bags           bags[]
   paidMessages   paidMessages?
-  movements      movements[]
+  revenues       movements[]
 }
 
 model bookmarkers {
