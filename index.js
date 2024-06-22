@@ -17,9 +17,10 @@ const sharp = require("sharp");
 const { exec } = require("child_process");
 const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
-const { createServer } = require("http");
+const Pusher = require("pusher");
+
 const flowRoutes = require("./lib/routes/flow");
-const { initializeSocketIo, getIo } = require("./lib/socket");
+
 const {
   S3Client,
   ListBucketsCommand,
@@ -42,48 +43,21 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST"],
-  })
-);
+app.use(cors());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.set("trust proxy", true); // Confía en las cabeceras de proxy
 app.use(useragent.express());
 
-const httpServer = createServer(app);
-
-initializeSocketIo(httpServer);
-
-const io = getIo();
-
-io.on("connection", (socket) => {
-  console.log("connected");
-
-  socket.on("session", (session) => {
-    console.log(session);
-  });
-
-  socket.on("logOut", async (data) => {
-    await prisma.sessions.delete({
-      where: {
-        userId: data.userId,
-        id: parseInt(data.sessionId),
-      },
-    });
-
-    console.log(data);
-
-    io.emit("logOutSuccess", {
-      userId: data.userId,
-      sessionId: data.sessionId,
-    });
-  });
-});
-
 const prisma = new PrismaClient();
 const upload = multer();
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET_KEY,
+  cluster: process.env.PUSHER_CLUSTER,
+  useTLS: true,
+});
 
 const compressFilesMiddleware = async (req, res, next) => {
   const compressVideo = (file) => {
@@ -182,7 +156,6 @@ const server = new ApolloServer({
       userAgent: req.useragent,
       authorization: req.headers.authorization,
       ipAddress: req.ip,
-      io: io,
     };
   },
   csrfPrevention: true,
@@ -322,12 +295,6 @@ app.post(
 
 initPassport(app);
 
-app.get("/", (req, res) => {
-  io.emit("path", "/");
-
-  res.send("Node.JS SERVER");
-});
-
 app.get("/success", async (req, res) => {
   const user = await req.user;
   auth;
@@ -355,11 +322,27 @@ app.get(
   })
 );
 
+app.post("/pusher/auth", (req, res) => {
+  const socketId = req.body.socket_id;
+  const channel = req.body.channel_name;
+  const auth = pusher.authorizeChannel(socketId, channel);
+  res.send(auth);
+});
+
+app.post("/emit", (req, res) => {
+  const { channel, event, data } = req.body;
+
+  pusher.trigger(channel, event, data);
+
+  // Responder con éxito
+  res.json({ message: "Evento emitido con éxito" });
+});
+
 const port = process.env.PORT;
 
 startApolloServer();
 
-httpServer.listen(port, () => {
+app.listen(port, async () => {
   console.log(`🚀 SOCKET Server running at: ${port}`);
 });
 

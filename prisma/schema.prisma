@@ -12,36 +12,39 @@ datasource db {
 }
 
 model users {
-  id              Int            @unique @default(autoincrement())
-  token           String         @unique @db.VarChar(40)
-  username        String         @unique @db.VarChar(25)
-  firstName       String         @db.VarChar(20)
-  lastName        String         @db.VarChar(20)
-  gender          String?        @db.VarChar(20)
-  phoneNumber     String?        @db.VarChar(20)
-  birthday        String?        @db.VarChar(15)
-  email           String         @unique @db.VarChar(60)
-  password        String         @db.VarChar(255)
-  createdAt       DateTime       @default(now())
-  updateAt        DateTime?      @updatedAt
-  updateFirstName Boolean        @default(false)
-  updateLastName  Boolean        @default(false)
-  rol             String?        @default("customer") @db.VarChar(20)
-  profile         profile?
-  likes           likes[]
-  posts           posts[]
-  comments        comments[]
-  multimedia      multimedia[]
-  bookmarkers     bookmarkers[]
-  suscriptions    suscriptions[]
-  creator         creator?
-  privacity       privacity?
-  blockeds        blockeds[]
-  customer        customer?
-  theme           theme?
-  notifications   notifications?
-  sessions        sessions[]
-  bags            bags[]
+  id               Int            @unique @default(autoincrement())
+  token            String         @unique @db.VarChar(40)
+  username         String         @unique @db.VarChar(25)
+  firstName        String         @db.VarChar(20)
+  lastName         String         @db.VarChar(20)
+  gender           String?        @db.VarChar(20)
+  phoneNumber      String?        @db.VarChar(20)
+  birthday         String?        @db.VarChar(15)
+  email            String         @unique @db.VarChar(60)
+  password         String         @db.VarChar(255)
+  createdAt        DateTime       @default(now())
+  updateAt         DateTime?      @updatedAt
+  updateFirstName  Boolean        @default(false)
+  updateLastName   Boolean        @default(false)
+  rol              String?        @default("customer") @db.VarChar(20)
+  profile          profile?
+  likes            likes[]
+  posts            posts[]
+  comments         comments[]
+  multimedia       multimedia[]
+  bookmarkers      bookmarkers[]
+  suscriptions     suscriptions[]
+  creator          creator?
+  privacity        privacity?
+  blockeds         blockeds[]
+  customer         customer?
+  theme            theme?
+  notifications    notifications?
+  sessions         sessions[]
+  bags             bags[]
+  notification     notification[]
+  receivedMessages message[]      @relation("ReceiverUser")
+  sentMessages     message[]
 }
 
 model customer {
@@ -94,6 +97,7 @@ model paidMessages {
   digitalProductId Int            @unique
   creator          creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId        Int            @unique
+  message          message[]
 }
 
 model wallet {
@@ -106,14 +110,13 @@ model wallet {
 }
 
 model movements {
-  id        Int      @unique @default(autoincrement())
-  amount    Float
-  type      String   @db.VarChar(30)
-  createdAt DateTime @default(now())
-
-  wallet           wallet  @relation(fields: [walletId], references: [id])
+  id               Int      @unique @default(autoincrement())
+  amount           Float
+  type             String   @db.VarChar(30)
+  createdAt        DateTime @default(now())
+  wallet           wallet   @relation(fields: [walletId], references: [id])
   walletId         Int
-  receiverWallet   wallet? @relation("receiverWallet", fields: [receiverWalletId], references: [id])
+  receiverWallet   wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
   receiverWalletId Int?
 
   sales sales?
@@ -195,6 +198,30 @@ model notifications {
   suscriptors  Boolean @default(true)
   users        users   @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId      Int     @unique
+}
+
+model message {
+  id             Int          @id @unique @default(autoincrement())
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  transmitter    users        @relation(fields: [transmitterId], references: [id])
+  transmitterId  Int
+  receiver       users        @relation("ReceiverUser", fields: [usersId], references: [id])
+  usersId        Int
+  paidMessages   paidMessages @relation(fields: [paidMessagesId], references: [id])
+  paidMessagesId Int
+}
+
+model notification {
+  id         Int       @id @unique @default(autoincrement())
+  content    String    @db.VarChar(255)
+  posts      posts?    @relation(fields: [postsId], references: [id])
+  comments   comments? @relation(fields: [commentsId], references: [id])
+  seen       Boolean   @default(false)
+  userId     users     @relation(fields: [usersId], references: [id])
+  usersId    Int
+  postsId    Int?
+  commentsId Int?
 }
 
 model theme {
@@ -280,6 +307,7 @@ model posts {
   bookmarkers      bookmarkers[]
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?            @unique
+  notification     notification[]
 }
 
 model likes {
@@ -293,15 +321,16 @@ model likes {
 }
 
 model comments {
-  id          Int        @id @default(autoincrement())
-  content     String     @db.Text
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  parentId    Int?       @map("parent_id")
-  parent      comments?  @relation("Subcomentarios", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subcomments comments[] @relation("Subcomentarios")
-  users       users?     @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId     Int?
-  posts       posts?     @relation(fields: [postsId], references: [id], onDelete: Cascade)
-  postsId     Int?
+  id           Int            @id @default(autoincrement())
+  content      String         @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  parentId     Int?           @map("parent_id")
+  parent       comments?      @relation("Subcomentarios", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcomments  comments[]     @relation("Subcomentarios")
+  users        users?         @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId      Int?
+  posts        posts?         @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  postsId      Int?
+  notification notification[]
 }
