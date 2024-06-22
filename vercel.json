@@ -10,10 +10,6 @@
     {
       "src": "/(.*)",
       "dest": "index.js"
-    },
-    {
-      "src": "/socket.io/(.*)",
-      "dest": "/index.js"
     }
   ]
 }
