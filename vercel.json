@@ -9,11 +9,11 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "index.js",
-      "methods": ["GET", "POST", "PUT", "PATCH", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*"
-      }
+      "dest": "index.js"
+    },
+    {
+      "src": "/socket.io/(.*)",
+      "dest": "/index.js"
     }
   ]
 }
