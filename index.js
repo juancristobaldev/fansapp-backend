@@ -45,6 +45,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: "*",
+    methods: ["GET", "POST"],
   })
 );
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
