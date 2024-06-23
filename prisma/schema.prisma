@@ -12,39 +12,40 @@ datasource db {
 }
 
 model users {
-  id               Int            @unique @default(autoincrement())
-  token            String         @unique @db.VarChar(40)
-  username         String         @unique @db.VarChar(25)
-  firstName        String         @db.VarChar(20)
-  lastName         String         @db.VarChar(20)
-  gender           String?        @db.VarChar(20)
-  phoneNumber      String?        @db.VarChar(20)
-  birthday         String?        @db.VarChar(15)
-  email            String         @unique @db.VarChar(60)
-  password         String         @db.VarChar(255)
-  createdAt        DateTime       @default(now())
-  updateAt         DateTime?      @updatedAt
-  updateFirstName  Boolean        @default(false)
-  updateLastName   Boolean        @default(false)
-  rol              String?        @default("customer") @db.VarChar(20)
-  profile          profile?
-  likes            likes[]
-  posts            posts[]
-  comments         comments[]
-  multimedia       multimedia[]
-  bookmarkers      bookmarkers[]
-  suscriptions     suscriptions[]
-  creator          creator?
-  privacity        privacity?
-  blockeds         blockeds[]
-  customer         customer?
-  theme            theme?
-  notifications    notifications?
-  sessions         sessions[]
-  bags             bags[]
-  notification     notification[]
-  receivedMessages message[]      @relation("ReceiverUser")
-  sentMessages     message[]
+  id                   Int            @unique @default(autoincrement())
+  token                String         @unique @db.VarChar(40)
+  username             String         @unique @db.VarChar(25)
+  firstName            String         @db.VarChar(20)
+  lastName             String         @db.VarChar(20)
+  gender               String?        @db.VarChar(20)
+  phoneNumber          String?        @db.VarChar(20)
+  birthday             String?        @db.VarChar(15)
+  email                String         @unique @db.VarChar(60)
+  password             String         @db.VarChar(255)
+  createdAt            DateTime       @default(now())
+  updateAt             DateTime?      @updatedAt
+  updateFirstName      Boolean        @default(false)
+  updateLastName       Boolean        @default(false)
+  rol                  String?        @default("customer") @db.VarChar(20)
+  profile              profile?
+  likes                likes[]
+  posts                posts[]
+  comments             comments[]
+  multimedia           multimedia[]
+  bookmarkers          bookmarkers[]
+  suscriptions         suscriptions[]
+  creator              creator?
+  privacity            privacity?
+  blockeds             blockeds[]
+  customer             customer?
+  theme                theme?
+  notifications        notifications?
+  sessions             sessions[]
+  bags                 bags[]
+  notification         notification[]
+  receivedMessages     message[]      @relation("ReceiverUser")
+  sentMessages         message[]
+  notificationReceiver notification[] @relation("receiver")
 }
 
 model customer {
@@ -215,13 +216,17 @@ model message {
 model notification {
   id         Int       @id @unique @default(autoincrement())
   content    String    @db.VarChar(255)
-  posts      posts?    @relation(fields: [postsId], references: [id])
+  likes      likes?    @relation(fields: [likesId], references: [id])
   comments   comments? @relation(fields: [commentsId], references: [id])
   seen       Boolean   @default(false)
-  userId     users     @relation(fields: [usersId], references: [id])
+  createdAt  DateTime
+  receiver   users?    @relation("receiver", fields: [receiverId], references: [id])
+  receiverId Int?
+  user       users     @relation(fields: [usersId], references: [id])
   usersId    Int
-  postsId    Int?
+
   commentsId Int?
+  likesId    Int?
 }
 
 model theme {
@@ -307,17 +312,17 @@ model posts {
   bookmarkers      bookmarkers[]
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?            @unique
-  notification     notification[]
 }
 
 model likes {
-  id        Int      @unique @default(autoincrement())
-  users     users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId   Int
-  media     posts    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  mediaId   Int
-  creator   creator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId Int?
+  id           Int            @unique @default(autoincrement())
+  users        users          @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId      Int
+  media        posts          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId      Int
+  creator      creator?       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId    Int?
+  notification notification[]
 }
 
 model comments {

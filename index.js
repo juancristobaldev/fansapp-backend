@@ -346,4 +346,25 @@ app.listen(port, async () => {
   console.log(`🚀 SOCKET Server running at: ${port}`);
 });
 
+setInterval(async () => {
+  try {
+    const lastWeekDate = new Date();
+    lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+
+    await prisma.notification
+      .deleteMany({
+        where: {
+          createdAt: {
+            lt: lastWeekDate,
+          },
+        },
+      })
+      .then((data) => {
+        console.log("eliminados", data);
+      });
+  } catch (error) {
+    console.log();
+  }
+}, 6000);
+
 module.exports = app;
