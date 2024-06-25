@@ -220,7 +220,7 @@ model notification {
   likes      likes?    @relation(fields: [likesId], references: [id])
   comments   comments? @relation(fields: [commentsId], references: [id])
   seen       Boolean   @default(false)
-  createdAt  DateTime
+  createdAt  DateTime  @default(now())
   receiver   users     @relation("receiver", fields: [receiverId], references: [id])
   receiverId Int
   user       users     @relation(fields: [usersId], references: [id])
