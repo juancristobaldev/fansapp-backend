@@ -194,6 +194,7 @@ model notifications {
   messages     Boolean @default(true)
   paidMessages Boolean @default(true)
   likes        Boolean @default(true)
+  purchases    Boolean @default(true)
   comments     Boolean @default(true)
   donations    Boolean @default(true)
   suscriptors  Boolean @default(true)
@@ -220,8 +221,8 @@ model notification {
   comments   comments? @relation(fields: [commentsId], references: [id])
   seen       Boolean   @default(false)
   createdAt  DateTime
-  receiver   users?    @relation("receiver", fields: [receiverId], references: [id])
-  receiverId Int?
+  receiver   users     @relation("receiver", fields: [receiverId], references: [id])
+  receiverId Int
   user       users     @relation(fields: [usersId], references: [id])
   usersId    Int
 
