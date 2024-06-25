@@ -343,7 +343,7 @@ const port = process.env.PORT;
 startApolloServer();
 
 app.listen(port, async () => {
-  console.log(`🚀 SOCKET Server running at: ${port}`);
+  console.log(`🚀 Server running at: ${port}`);
 });
 
 setInterval(async () => {
