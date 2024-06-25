@@ -304,6 +304,10 @@ app.get("/success", async (req, res) => {
   }
 });
 
+app.get("/", async (req, res) => {
+  res.send("server node.js");
+});
+
 app.get("/login/federated/google", passport.authenticate("google"));
 app.get(
   "/oauth2/redirect/google",
