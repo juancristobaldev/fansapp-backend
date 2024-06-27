@@ -21,14 +21,11 @@ const Pusher = require("pusher");
 
 const flowRoutes = require("./lib/routes/flow");
 
-const {
-  S3Client,
-  ListBucketsCommand,
-  PutObjectCommand,
-} = require("@aws-sdk/client-s3");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const { file } = require("googleapis/build/src/apis/file");
 const { v4 } = require("uuid");
 const { initS3Client } = require("./lib/aws3Functions");
+const { default: axios } = require("axios");
 
 const client = initS3Client();
 
@@ -168,6 +165,34 @@ async function startApolloServer() {
 }
 
 app.use("/apiFlow", flowRoutes);
+
+app.post("query-gql", async (req, res) => {
+  try {
+    const response = await axios
+      .post(
+        `${
+          process.env.ENVIROMENT == "production"
+            ? process.env.URL_PRODUCTION
+            : process.env.URL_DEVELOPMENT
+        }/graphql`,
+        { query: req.body.query, variables: req.body.variables },
+        {
+          headers: {
+            authorization: `${req.body.token}`, // Aquí se añade el token al header 'Authorization'
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((data) => {
+        console.log(data);
+        return data.data;
+      });
+
+    res.send(response);
+  } catch (e) {
+    console.log(e);
+  }
+});
 
 app.post("/delete-files", (req, res) => {
   console.log("delete");
