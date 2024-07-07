@@ -188,6 +188,7 @@ app.post("query-gql", async (req, res) => {
         return data.data;
       });
 
+    console.log(response);
     res.send(response);
   } catch (e) {
     console.log(e);
@@ -216,7 +217,7 @@ app.post(
   upload.array("files"),
   compressFilesMiddleware,
   async (req, res) => {
-    const { to, id, userId } = req.body;
+    const { to, id, userId, blur = true } = req.body;
     const blobs = req.compressedFiles;
 
     const uploadFileToSw3 = async (uploadParams) => {
@@ -250,7 +251,6 @@ app.post(
         };
 
         const data = await uploadFileToSw3(uploadParams);
-        const blur = await uploadFileToSw3(blurParams);
 
         let newPathsSw3 = {};
 
@@ -262,11 +262,15 @@ app.post(
           };
         }
 
-        if (blur[`$metadata`].httpStatusCode == 200) {
-          newPathsSw3 = {
-            ...newPathsSw3,
-            blur: `blur-${key}`,
-          };
+        if (blur) {
+          const blurSw3 = await uploadFileToSw3(blurParams);
+
+          if (blurSw3[`$metadata`].httpStatusCode == 200) {
+            newPathsSw3 = {
+              ...newPathsSw3,
+              blur: `blur-${key}`,
+            };
+          }
         }
         console.log("newPathsSw3 -> ", newPathsSw3);
         pathsSw3.push(newPathsSw3);
@@ -372,6 +376,17 @@ const port = process.env.PORT;
 startApolloServer();
 
 app.listen(port, async () => {
+  /**
+ * 
+ * 
+ * 
+ *   await prisma.conversation.deleteMany().then(async () => {
+    console.log(
+      await prisma.message.findMany(),
+      await prisma.conversation.findMany()
+    );
+  });
+ */
   console.log(`🚀 Server running at: ${port}`);
 });
 

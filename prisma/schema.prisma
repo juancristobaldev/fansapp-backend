@@ -12,21 +12,21 @@ datasource db {
 }
 
 model users {
-  id                   Int            @unique @default(autoincrement())
-  token                String         @unique @db.VarChar(40)
-  username             String         @unique @db.VarChar(25)
-  firstName            String         @db.VarChar(20)
-  lastName             String         @db.VarChar(20)
-  gender               String?        @db.VarChar(20)
-  phoneNumber          String?        @db.VarChar(20)
-  birthday             String?        @db.VarChar(15)
-  email                String         @unique @db.VarChar(60)
-  password             String         @db.VarChar(255)
-  createdAt            DateTime       @default(now())
-  updateAt             DateTime?      @updatedAt
-  updateFirstName      Boolean        @default(false)
-  updateLastName       Boolean        @default(false)
-  rol                  String?        @default("customer") @db.VarChar(20)
+  id                   Int                   @unique @default(autoincrement())
+  token                String                @unique @db.VarChar(40)
+  username             String                @unique @db.VarChar(25)
+  firstName            String                @db.VarChar(20)
+  lastName             String                @db.VarChar(20)
+  gender               String?               @db.VarChar(20)
+  phoneNumber          String?               @db.VarChar(20)
+  birthday             String?               @db.VarChar(15)
+  email                String                @unique @db.VarChar(60)
+  password             String                @db.VarChar(255)
+  createdAt            DateTime              @default(now())
+  updateAt             DateTime?             @updatedAt
+  updateFirstName      Boolean               @default(false)
+  updateLastName       Boolean               @default(false)
+  rol                  String?               @default("customer") @db.VarChar(20)
   profile              profile?
   likes                likes[]
   posts                posts[]
@@ -43,9 +43,9 @@ model users {
   sessions             sessions[]
   bags                 bags[]
   notification         notification[]
-  receivedMessages     message[]      @relation("ReceiverUser")
   sentMessages         message[]
-  notificationReceiver notification[] @relation("receiver")
+  notificationReceiver notification[]        @relation("receiver")
+  membersConversation  membersConversation[]
 }
 
 model customer {
@@ -202,16 +202,35 @@ model notifications {
   usersId      Int     @unique
 }
 
-model message {
+model conversation {
+  id        Int                   @id @unique @default(autoincrement())
+  members   membersConversation[]
+  messages  message[]
+  createdAt DateTime              @default(now())
+}
+
+model membersConversation {
   id             Int          @id @unique @default(autoincrement())
-  content        String       @db.Text
-  createdAt      DateTime     @default(now())
-  transmitter    users        @relation(fields: [transmitterId], references: [id])
-  transmitterId  Int
-  receiver       users        @relation("ReceiverUser", fields: [usersId], references: [id])
+  user           users        @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId        Int
-  paidMessages   paidMessages @relation(fields: [paidMessagesId], references: [id])
-  paidMessagesId Int
+  rol            String       @db.VarChar(10)
+  conversation   conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int
+  joinAt         DateTime     @default(now())
+}
+
+model message {
+  id             Int           @id @unique @default(autoincrement())
+  content        String        @db.Text
+  createdAt      DateTime      @default(now())
+  transmitter    users         @relation(fields: [transmitterId], references: [id])
+  transmitterId  Int
+  paidMessages   paidMessages? @relation(fields: [paidMessagesId], references: [id], onDelete: Cascade)
+  paidMessagesId Int?
+  multimedia     multimedia[]
+  conversation   conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId Int?
+  seen           Boolean       @default(false)
 }
 
 model notification {
@@ -225,7 +244,6 @@ model notification {
   receiverId Int
   user       users     @relation(fields: [usersId], references: [id])
   usersId    Int
-
   commentsId Int?
   likesId    Int?
 }
@@ -287,14 +305,16 @@ model bookmarkers {
 }
 
 model multimedia {
-  id      Int     @unique @default(autoincrement())
-  source  String  @db.Text
-  blur    String? @db.Text
-  type    String  @db.VarChar(10)
-  posts   posts?  @relation(fields: [postsId], references: [id], onDelete: Cascade)
-  postsId Int?
-  users   users?  @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId Int?
+  id        Int      @unique @default(autoincrement())
+  source    String   @db.Text
+  blur      String?  @db.Text
+  type      String   @db.VarChar(10)
+  posts     posts?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  postsId   Int?
+  users     users?   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  usersId   Int?
+  message   message? @relation(fields: [messageId], references: [id])
+  messageId Int?
 }
 
 model posts {
