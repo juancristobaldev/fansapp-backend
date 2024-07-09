@@ -46,6 +46,7 @@ model users {
   sentMessages         message[]
   notificationReceiver notification[]        @relation("receiver")
   membersConversation  membersConversation[]
+  albums               albums[]
 }
 
 model customer {
@@ -62,22 +63,49 @@ model customer {
 }
 
 model plans {
-  id                        Int            @unique @default(autoincrement())
-  creator                   creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  id                        Int             @unique @default(autoincrement())
+  creator                   creator         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId                 Int
-  createdAt                 DateTime?      @default(now())
+  createdAt                 DateTime?       @default(now())
   updateAt                  DateTime?
   amount                    Float?
   yearlyAmount              Float?
   yearlyAmountWithDiscount  Float?
   monthlyAmountWithDiscount Float?
-  discount                  Int            @default(0)
-  yearlyVisibility          Boolean        @default(true)
-  visibility                Boolean        @default(true)
-  type                      String         @db.Char(10)
+  discount                  Int             @default(0)
+  yearlyVisibility          Boolean         @default(true)
+  visibility                Boolean         @default(true)
+  type                      String          @db.Char(10)
   suscriptors               suscriptions[]
-  digitalProduct            digitalProduct @relation(fields: [digitalProductId], references: [id])
-  digitalProductId          Int            @unique
+  digitalProduct            digitalProduct  @relation(fields: [digitalProductId], references: [id])
+  digitalProductId          Int             @unique
+  postsOfPlans              postsOfPlans[]
+  albumsOfPlans             albumsOfPlans[]
+}
+
+model postsOfPlans {
+  id      Int   @unique @default(autoincrement())
+  plans   plans @relation(fields: [plansId], references: [id])
+  posts   posts @relation(fields: [postsId], references: [id])
+  plansId Int
+  postsId Int
+}
+
+model albumsOfPlans {
+  id       Int    @unique @default(autoincrement())
+  album    albums @relation(fields: [albumsId], references: [id])
+  plans    plans  @relation(fields: [plansId], references: [id])
+  albumsId Int
+  plansId  Int
+}
+
+model albums {
+  id            Int             @unique @default(autoincrement())
+  multimedia    multimedia[]
+  user          users           @relation(fields: [userId], references: [id])
+  userId        Int
+  sales         sales[]
+  albumsOfPlans albumsOfPlans[]
 }
 
 model digitalProduct {
@@ -161,6 +189,8 @@ model sales {
   customerId       Int
   movements        movements?      @relation(fields: [movementsId], references: [id])
   movementsId      Int?            @unique
+  albums           albums?         @relation(fields: [albumId], references: [id])
+  albumId          Int?
 }
 
 model privacity {
@@ -309,12 +339,14 @@ model multimedia {
   source    String   @db.Text
   blur      String?  @db.Text
   type      String   @db.VarChar(10)
-  posts     posts?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  posts     posts?   @relation(fields: [postsId], references: [id], onDelete: SetNull)
   postsId   Int?
   users     users?   @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId   Int?
-  message   message? @relation(fields: [messageId], references: [id])
+  message   message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
   messageId Int?
+  albums    albums?  @relation(fields: [albumId], references: [id])
+  albumId   Int?
 }
 
 model posts {
@@ -333,6 +365,7 @@ model posts {
   bookmarkers      bookmarkers[]
   digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?            @unique
+  postsOfPlans     postsOfPlans[]
 }
 
 model likes {
