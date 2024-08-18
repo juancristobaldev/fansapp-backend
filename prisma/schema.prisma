@@ -11,7 +11,7 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
-model users {
+model User {
   id                   Int                   @unique @default(autoincrement())
   token                String                @unique @db.VarChar(40)
   username             String                @unique @db.VarChar(25)
@@ -27,154 +27,200 @@ model users {
   updateFirstName      Boolean               @default(false)
   updateLastName       Boolean               @default(false)
   rol                  String?               @default("customer") @db.VarChar(20)
-  profile              profile?
-  likes                likes[]
-  posts                posts[]
-  comments             comments[]
-  multimedia           multimedia[]
-  bookmarkers          bookmarkers[]
-  suscriptions         suscriptions[]
-  creator              creator?
-  privacity            privacity?
-  blockeds             blockeds[]
-  customer             customer?
-  theme                theme?
-  notifications        notifications?
-  sessions             sessions[]
-  bags                 bags[]
-  notification         notification[]
-  sentMessages         message[]
-  notificationReceiver notification[]        @relation("receiver")
-  membersConversation  membersConversation[]
-  albums               albums[]
+  profile              Profile?
+  likes                Like[]
+  comments             Comment[]
+  bookmarkers          Bookmarker[]
+  suscriptions         Suscription[]
+  creator              Creator?
+  privacity            Privacity?
+  blockeds             Blocked[]
+  customer             Customer?
+  theme                Theme?
+  notifications        PrivacityNotification?
+  sessions             Session[]
+  notification         Notification[]
+  sentMessages         Message[]
+  notificationReceiver Notification[]        @relation("receiver")
+  membersConversation  MemberOfConversation[]
+
 }
 
-model customer {
+model RequestCreator {
+  id             Int              @unique   @default(autoincrement())
+  status         String           @default("pending") @db.VarChar(30)
+  country        String           @db.VarChar(60)
+  city           String           @db.VarChar(60)
+  address        String           @db.VarChar(60)
+  zipCode        String           @db.VarChar(60)
+  createdAt      DateTime         @default(now())
+  dniFront       String           @db.Text
+  dniBack        String           @db.Text
+  creator        Creator  @relation(fields:[creatorId], references: [id], onDelete: Cascade)
+  creatorId      Int
+}
+
+model Creator {
+  id             Int              @unique @default(autoincrement())
+  approbedDate   DateTime?
+  category       String? @db.VarChar(50)
+  likes          Like[]
+  suscriptors    Suscription[]
+  saveds         Bookmarker[]
+  userId         Int              @unique
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request        RequestCreator[]
+  multimedias    Multimedia[]
+  posts          Post[]
+  digitalProduct DigitalProduct[]
+  plans          Plan[]
+  packages       Package[]
+  paidMessages   PaidMessage?
+}
+
+model Customer {
   id              Int       @unique @default(autoincrement())
   customerId      String    @unique @db.VarChar(30)
   last4CardDigits Int?
   status          Int?
   createdAt       DateTime? @default(now())
   registerDate    DateTime?
-  user            users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          Int       @unique
-  shopping        sales[]
-  wallet          wallet?
+  shopping        Sale[]
+  wallet          Wallet?
 }
 
-model plans {
+model Hashtag {
+  id Int @unique @default(autoincrement())
+  hashtag String @db.VarChar(25)
+  profiles HashTagProfile[]
+  posts HashTagPosts[]
+}
+
+model HashTagProfile {
+  id Int @unique @default(autoincrement())
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  hashtagId Int
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId Int 
+}
+
+model HashTagPosts {
+  id Int @unique @default(autoincrement())
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  hashtagId Int
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId Int 
+}
+
+model Plan {
   id                        Int             @unique @default(autoincrement())
-  creator                   creator         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator                   Creator         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId                 Int
+  title                     String          @db.VarChar(150)
   createdAt                 DateTime?       @default(now())
   updateAt                  DateTime?
-  amount                    Float?
-  yearlyAmount              Float?
-  yearlyAmountWithDiscount  Float?
-  monthlyAmountWithDiscount Float?
-  discount                  Int             @default(0)
-  yearlyVisibility          Boolean         @default(true)
-  visibility                Boolean         @default(true)
-  type                      String          @db.Char(10)
-  suscriptors               suscriptions[]
-  digitalProduct            digitalProduct  @relation(fields: [digitalProductId], references: [id])
+  visibility                Boolean         @default(false)
+  permissions               String          @db.VarChar(10) @default("all")
+  suscriptors               Suscription[]
+  digitalProduct            DigitalProduct  @relation(fields: [digitalProductId], references: [id])
   digitalProductId          Int             @unique
-  postsOfPlans              postsOfPlans[]
-  albumsOfPlans             albumsOfPlans[]
+  postsOfPlans              PostOfPlan[]
+  albumsOfPlans             PackageOfPlan[]
 }
 
-model postsOfPlans {
+model PostOfPlan {
   id      Int   @unique @default(autoincrement())
-  plans   plans @relation(fields: [plansId], references: [id])
-  posts   posts @relation(fields: [postsId], references: [id])
+  plans   Plan @relation(fields: [plansId], references: [id])
+  posts   Post @relation(fields: [postsId], references: [id])
   plansId Int
   postsId Int
 }
 
-model albumsOfPlans {
+model PackageOfPlan {
   id       Int    @unique @default(autoincrement())
-  album    albums @relation(fields: [albumsId], references: [id])
-  plans    plans  @relation(fields: [plansId], references: [id])
+  album    Package @relation(fields: [albumsId], references: [id])
+  plans    Plan  @relation(fields: [plansId], references: [id])
   albumsId Int
   plansId  Int
 }
 
-model albums {
-  id            Int             @unique @default(autoincrement())
-  multimedia    multimedia[]
-  user          users           @relation(fields: [userId], references: [id])
-  userId        Int
-  sales         sales[]
-  albumsOfPlans albumsOfPlans[]
+model Package {
+  id                Int             @unique @default(autoincrement())
+  multimedia        Multimedia[]
+  creator           Creator           @relation(fields: [creatorId], references: [id])
+  creatorId         Int
+  sales             Sale[]
+  privacity         String @db.VarChar(40)
+  visibility        Boolean @default(true)
+  albumsOfPlans     PackageOfPlan[]
+  digitalProduct    DigitalProduct?  @relation(fields:[digitalProductId], references: [id])
+  digitalProductId  Int? @unique
 }
 
-model digitalProduct {
-  id           Int           @unique @default(autoincrement())
-  creator      creator       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId    Int
-  plan         plans?
-  post         posts?
-  paidMessages paidMessages?
-  sales        sales[]
+model DigitalProduct {
+  id            Int           @unique @default(autoincrement())
+  amount        Float?
+  discount      Int @default(0)
+  creator       Creator       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId     Int
+  plan          Plan?
+  post          Post?
+  paidMessages  PaidMessage?
+  package       Package?
+  sales         Sale[]
 }
 
-model paidMessages {
+model PaidMessage {
   id               Int            @unique @default(autoincrement())
-  amount           Float?
   visibility       Boolean?       @default(true)
-  digitalProduct   digitalProduct @relation(fields: [digitalProductId], references: [id], onDelete: Cascade)
+  digitalProduct   DigitalProduct @relation(fields: [digitalProductId], references: [id], onDelete: Cascade)
   digitalProductId Int            @unique
-  creator          creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator          Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId        Int            @unique
-  message          message[]
+  message          Message[]
 }
 
-model wallet {
+model Wallet {
   id         Int         @unique @default(autoincrement())
   amount     Float
-  movements  movements[]
-  customer   customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  movements  Movement[]
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId Int         @unique
-  revenue    movements[] @relation("receiverWallet")
+  revenue    Movement[] @relation("receiverWallet")
 }
 
-model movements {
+model Movement {
   id               Int      @unique @default(autoincrement())
   amount           Float
   type             String   @db.VarChar(30)
   createdAt        DateTime @default(now())
-  wallet           wallet   @relation(fields: [walletId], references: [id])
+  wallet           Wallet   @relation(fields: [walletId], references: [id])
   walletId         Int
-  receiverWallet   wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
+  receiverWallet   Wallet?  @relation("receiverWallet", fields: [receiverWalletId], references: [id])
   receiverWalletId Int?
-
-  sales sales?
+  sales Sale?
 }
 
-model bags {
-  id        Int     @id @unique @default(autoincrement())
-  creator   creator @relation(fields: [creatorId], references: [id])
-  creatorId Int
-  messages  Int     @default(5)
-  user      users   @relation(fields: [usersId], references: [id])
-  usersId   Int
+
+
+model Profile {
+  id              Int     @id @unique @default(autoincrement())
+  linkProfile     String? @db.Text
+  photo           String? @db.Text
+  frontPage       String? @db.Text
+  description     String? @db.Text
+  location        String? @db.Text
+  language        String? @db.Text
+  tiktok          String? @db.Text
+  instagram       String? @db.Text
+  userId          Int     @unique
+  users           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashtags HashTagProfile[]
 }
 
-model profile {
-  id          Int     @id @unique @default(autoincrement())
-  linkProfile String? @db.Text
-  photo       String? @db.Text
-  description String? @db.Text
-  location    String? @db.Text
-  language    String? @db.Text
-  frontPage   String? @db.Text
-  tiktok      String? @db.Text
-  instagram   String? @db.Text
-  userId      Int     @unique
-  users       users   @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model sales {
+model Sale {
   id               String          @id @unique @db.VarChar(15)
   status           Int             @default(1)
   subject          String          @db.Text()
@@ -183,43 +229,44 @@ model sales {
   createdDate      DateTime?       @default(now())
   transferDate     DateTime?
   amount           Float
-  customer         customer        @relation(fields: [customerId], references: [id])
-  digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
+  customer         Customer        @relation(fields: [customerId], references: [id])
+  digitalProduct   DigitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?
   customerId       Int
-  movements        movements?      @relation(fields: [movementsId], references: [id])
+  movements        Movement?      @relation(fields: [movementsId], references: [id])
   movementsId      Int?            @unique
-  albums           albums?         @relation(fields: [albumId], references: [id])
+  albums           Package?         @relation(fields: [albumId], references: [id])
   albumId          Int?
 }
 
-model privacity {
+model Privacity {
   id       Int    @id @unique @default(autoincrement())
   userId   Int    @unique
-  users    users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile  String @default("all") @db.VarChar(20)
   messages String @default("nobody") @db.VarChar(20)
+  
 }
 
-model blockeds {
+model Blocked {
   id        Int   @id @unique @default(autoincrement())
   userId    Int
-  users     users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
   blockedBy Int
 }
 
-model sessions {
+model Session {
   id            Int      @id @unique @default(autoincrement())
   deviceName    String   @db.VarChar(30)
   lastSessionAt DateTime @default(now())
   signInAt      DateTime @default(now())
   browser       String   @db.VarChar(30)
   source        String   @db.Text
-  user          users?   @relation(fields: [userId], references: [id])
+  user          User?   @relation(fields: [userId], references: [id])
   userId        Int?
 }
 
-model notifications {
+model PrivacityNotification {
   id           Int     @id @unique @default(autoincrement())
   messages     Boolean @default(true)
   paidMessages Boolean @default(true)
@@ -228,168 +275,149 @@ model notifications {
   comments     Boolean @default(true)
   donations    Boolean @default(true)
   suscriptors  Boolean @default(true)
-  users        users   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  users        User   @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId      Int     @unique
 }
 
-model conversation {
+model Conversation {
   id        Int                   @id @unique @default(autoincrement())
-  members   membersConversation[]
-  messages  message[]
+  members   MemberOfConversation[]
+  messages  Message[]
   createdAt DateTime              @default(now())
 }
 
-model membersConversation {
+model MemberOfConversation {
   id             Int          @id @unique @default(autoincrement())
-  user           users        @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId        Int
   rol            String       @db.VarChar(10)
-  conversation   conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId Int
   joinAt         DateTime     @default(now())
 }
 
-model message {
+model Message {
   id             Int           @id @unique @default(autoincrement())
   content        String        @db.Text
   createdAt      DateTime      @default(now())
-  transmitter    users         @relation(fields: [transmitterId], references: [id])
+  transmitter    User         @relation(fields: [transmitterId], references: [id])
   transmitterId  Int
-  paidMessages   paidMessages? @relation(fields: [paidMessagesId], references: [id], onDelete: Cascade)
+  paidMessages   PaidMessage? @relation(fields: [paidMessagesId], references: [id], onDelete: Cascade)
   paidMessagesId Int?
-  multimedia     multimedia[]
-  conversation   conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  multimedia     Multimedia[]
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId Int?
   seen           Boolean       @default(false)
 }
 
-model notification {
+model Notification {
   id         Int       @id @unique @default(autoincrement())
   content    String    @db.VarChar(255)
-  likes      likes?    @relation(fields: [likesId], references: [id])
-  comments   comments? @relation(fields: [commentsId], references: [id])
+  likes      Like?    @relation(fields: [likesId], references: [id])
+  comments   Comment? @relation(fields: [commentsId], references: [id])
   seen       Boolean   @default(false)
   createdAt  DateTime  @default(now())
-  receiver   users     @relation("receiver", fields: [receiverId], references: [id])
+  receiver   User     @relation("receiver", fields: [receiverId], references: [id])
   receiverId Int
-  user       users     @relation(fields: [usersId], references: [id])
+  user       User     @relation(fields: [usersId], references: [id])
   usersId    Int
   commentsId Int?
   likesId    Int?
 }
 
-model theme {
+model Theme {
   id          Int     @id @unique @default(autoincrement())
   darkMode    Boolean @default(false)
   languageApp String  @default("spanish") @db.VarChar(20)
   themeColor  String  @default("#eb117a") @db.Char(7)
-  users       users   @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  users       User   @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId     Int     @unique
 }
 
-model suscriptions {
+model Suscription {
   id        Int       @unique @default(autoincrement())
   status    Int?      @default(1)
-  user      users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    Int?
-  creator   creator?  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator   Creator?  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId Int?
   createdAt DateTime  @default(now())
   deadDate  DateTime?
   price     Int?
-  plans     plans?    @relation(fields: [plansId], references: [id])
+  plans     Plan?    @relation(fields: [plansId], references: [id])
   plansId   Int?
 }
 
-model creator {
-  id             Int              @unique @default(autoincrement())
-  status         String           @default("pending") @db.VarChar(30)
-  approbedDate   DateTime?
-  requestDate    DateTime?
-  likes          likes[]
-  suscriptors    suscriptions[]
-  saveds         bookmarkers[]
-  userId         Int              @unique
-  user           users            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  country        String           @db.VarChar(60)
-  city           String           @db.VarChar(60)
-  address        String           @db.VarChar(60)
-  zipCode        String           @db.VarChar(60)
-  dniFront       String           @db.Text
-  dniBack        String           @db.Text
-  digitalProduct digitalProduct[]
-  plans          plans[]
-  bags           bags[]
-  paidMessages   paidMessages?
-}
 
-model bookmarkers {
+
+model Bookmarker {
   id        Int      @unique @default(autoincrement())
-  post      posts?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  post      Post?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId   Int?
-  creator   creator? @relation(fields: [creatorId], references: [id])
+  creator   Creator? @relation(fields: [creatorId], references: [id])
   creatorId Int?
-  users     users    @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  users     User    @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId   Int
   createdAt DateTime @default(now())
 }
 
-model multimedia {
+model Multimedia {
   id        Int      @unique @default(autoincrement())
   source    String   @db.Text
   blur      String?  @db.Text
   type      String   @db.VarChar(10)
-  posts     posts?   @relation(fields: [postsId], references: [id], onDelete: SetNull)
+  thumbnail String?  @db.Text
+  creator   Creator? @relation(fields:[creatorId],references: [id], onDelete: Cascade)
+  creatorId Int?
+  posts     Post?   @relation(fields: [postsId], references: [id], onDelete: SetNull)
   postsId   Int?
-  users     users?   @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  usersId   Int?
-  message   message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
   messageId Int?
-  albums    albums?  @relation(fields: [albumId], references: [id])
+  albums    Package?  @relation(fields: [albumId], references: [id])
   albumId   Int?
 }
 
-model posts {
+model Post {
   id               Int             @unique @default(autoincrement())
   createdAt        DateTime        @default(now())
   updatedAt        DateTime?       @updatedAt
-  amount           Float?
   description      String?         @db.VarChar(200)
   location         String?         @db.Text()
   privacity        String          @default("suscriptors") @db.VarChar(15)
-  usersId          Int?
-  users            users?          @relation(fields: [usersId], references: [id], onDelete: Cascade)
-  likes            likes[]
-  comments         comments[]
-  multimedia       multimedia[]
-  bookmarkers      bookmarkers[]
-  digitalProduct   digitalProduct? @relation(fields: [digitalProductId], references: [id])
+  creator          Creator? @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId        Int?
+  digitalProduct   DigitalProduct? @relation(fields: [digitalProductId], references: [id])
   digitalProductId Int?            @unique
-  postsOfPlans     postsOfPlans[]
+  likes            Like[]
+  comments         Comment[]
+  multimedia       Multimedia[]
+  bookmarkers      Bookmarker[]
+  postsOfPlans     PostOfPlan[]
+  hashtags         HashTagPosts[]
 }
 
-model likes {
+model Like {
   id           Int            @unique @default(autoincrement())
-  users        users          @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  users        User          @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId      Int
-  media        posts          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  media        Post          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   mediaId      Int
-  creator      creator?       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator      Creator?       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   creatorId    Int?
-  notification notification[]
+  notification Notification[]
 }
 
-model comments {
+model Comment {
   id           Int            @id @default(autoincrement())
   content      String         @db.Text
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   parentId     Int?           @map("parent_id")
-  parent       comments?      @relation("Subcomentarios", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subcomments  comments[]     @relation("Subcomentarios")
-  users        users?         @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  parent       Comment?      @relation("Subcomentarios", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcomments  Comment[]     @relation("Subcomentarios")
+  users        User?         @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId      Int?
-  posts        posts?         @relation(fields: [postsId], references: [id], onDelete: Cascade)
+  posts        Post?         @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId      Int?
-  notification notification[]
+  notification Notification[]
 }

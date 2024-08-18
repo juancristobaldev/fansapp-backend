@@ -12,21 +12,17 @@ require("dotenv").config({ path: "./.env" });
 const { PrismaClient } = require("@prisma/client");
 const { initPassport } = require("./lib/initPassport");
 const resolvers = require("./lib/resolvers");
+const resolversAdmin = require("./lib/admin/resolvers");
 const { ApolloServer } = require("apollo-server-express");
-const sharp = require("sharp");
-const { exec } = require("child_process");
-const ffmpeg = require("ffmpeg-static");
 const fs = require("fs");
 const Pusher = require("pusher");
-
 const flowRoutes = require("./lib/routes/flow");
-
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const { file } = require("googleapis/build/src/apis/file");
 const { v4 } = require("uuid");
 const { initS3Client } = require("./lib/aws3Functions");
 const { default: axios } = require("axios");
-
+const defs = require("./lib/admin/gql/defs");
+const { compressImage, compressVideo } = require("./lib/utilsMedia");
 const client = initS3Client();
 
 app.use(
@@ -57,80 +53,22 @@ const pusher = new Pusher({
 });
 
 const compressFilesMiddleware = async (req, res, next) => {
-  const compressVideo = (file) => {
-    return new Promise((resolve, reject) => {
-      try {
-        console.log(file);
-        const buffer = file.buffer;
-
-        const command = `${ffmpeg} -i -vf scale=640:480 -c:v libx265 -crf 28 -b:v 1M -c:a aac -b:a 128k -f mp4 pipe:1`;
-
-        const ffmpegProcess = exec(
-          command,
-          { encoding: "buffer" },
-          (error, stdout, stderr) => {
-            if (error) {
-              console.error("Error al comprimir el video:", stderr);
-              reject(error);
-              return;
-            }
-            console.log("video comprimido:", stdout);
-            resolve({
-              blob: stdout,
-              type: file.mimetype,
-              name: file.originalname,
-            });
-          }
-        );
-
-        ffmpegProcess.stdin(buffer);
-        ffmpegProcess.stdin.end();
-      } catch (error) {
-        console.error("Error al comprimir el video:", error);
-        reject(error);
-      }
-    });
-  };
-
-  const compressImage = async (file) => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const buffer = file.buffer;
-        console.log(file);
-        const blob = await sharp(buffer)
-          .resize() // Ajusta el tamaño de la imagen según sea necesario
-          .jpeg({ quality: 50 })
-          .toBuffer();
-
-        const blur = await sharp(buffer)
-          .resize()
-          .jpeg({ quality: 50 })
-          .blur(50)
-          .toBuffer();
-
-        resolve({
-          blob: blob,
-          type: file.mimetype,
-          blur: blur,
-          name: file.originalname,
-        });
-      } catch (error) {
-        console.error("Error al comprimir la imagen:", error);
-        reject(error);
-      }
-    });
-  };
+  const { thumbnails, files } = req.files;
 
   try {
-    if (!req.files || req.files.length === 0) {
+    if (!files || files.length === 0) {
       return next();
     }
 
-    const compressPromises = req.files.map(async (file) => {
+    const compressPromises = files.map(async (file) => {
       if (file.mimetype.startsWith("image")) {
         return await compressImage(file);
       } else {
-        return await compressVideo(file);
+        const thumbnail = thumbnails.find((thumbnail) =>
+          thumbnail["originalname"].includes(file["originalname"])
+        );
+
+        return await compressVideo(file, thumbnail);
       }
     });
 
@@ -141,6 +79,7 @@ const compressFilesMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.log(error);
     res.status(500).send("error al comprimir archivos.");
   }
 };
@@ -159,9 +98,26 @@ const server = new ApolloServer({
   cache: "bounded",
 });
 
+const serverAdmin = new ApolloServer({
+  typeDefs: defs,
+  resolvers: resolversAdmin,
+  context: ({ req }) => {
+    return {
+      userAgent: req.useragent,
+      authorization: req.headers.authorization,
+      ipAddress: req.ip,
+    };
+  },
+  csrfPrevention: true,
+  cache: "bounded",
+});
+
 async function startApolloServer() {
   await server.start();
-  server.applyMiddleware({ app });
+  server.applyMiddleware({ app, path: "/graphql" });
+
+  await serverAdmin.start();
+  serverAdmin.applyMiddleware({ app, path: "/graphql-admin" });
 }
 
 app.use("/apiFlow", flowRoutes);
@@ -212,12 +168,18 @@ app.post("/delete-files", (req, res) => {
   });
 });
 
+const uploadFields = [
+  { name: "files" }, // Ajusta el maxCount según tus necesidades
+  { name: "thumbnails" }, // RegEx para aceptar cualquier campo que empiece con 'file_blur_'
+];
+
 app.post(
   "/upload-files",
-  upload.array("files"),
+  upload.fields(uploadFields),
   compressFilesMiddleware,
   async (req, res) => {
     const { to, id, userId, blur = true } = req.body;
+
     const blobs = req.compressedFiles;
 
     const uploadFileToSw3 = async (uploadParams) => {
@@ -236,43 +198,55 @@ app.post(
     for (const buffer of blobs) {
       try {
         const key = `${v4() + buffer.name}`;
-        const uploadParams = {
-          Key: key,
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Body: buffer.blob, // Ruta local del archivo a subir
-          ContentType: buffer.type, // Por ejemplo, "video/mp4"
-        };
 
-        const blurParams = {
-          Key: `blur-${key}`,
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Body: buffer.blur, // Ruta local del archivo a subir
-          ContentType: buffer.type, // Por ejemplo, "video/mp4"
-        };
+        let params = [
+          {
+            Key: key,
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Body: buffer.blob, // Ruta local del archivo a subir
+            ContentType: buffer.type, // Por ejemplo, "video/mp4"
+          },
+          {
+            Key: `blur-${key}`,
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Body: buffer.blur, // Ruta local del archivo a subir
+            ContentType: buffer.type, // Por ejemplo, "video/mp4"
+          },
+        ];
 
-        const data = await uploadFileToSw3(uploadParams);
-
-        let newPathsSw3 = {};
-
-        if (data[`$metadata`].httpStatusCode == 200) {
-          newPathsSw3 = {
-            ...newPathsSw3,
-            key,
-            type: buffer.type.includes("image") ? "image" : "video",
-          };
+        if (buffer.thumbnail) {
+          params.push({
+            Key: `tn-${key}`,
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Body: buffer.thumbnail, // Ruta local del archivo a subir
+            ContentType: buffer.type, // Por ejemplo, "video/mp4"
+          });
         }
 
-        if (blur) {
-          const blurSw3 = await uploadFileToSw3(blurParams);
+        let newPathsSw3 = {
+          type: buffer.type.includes("image") ? "image" : "video",
+        };
 
-          if (blurSw3[`$metadata`].httpStatusCode == 200) {
-            newPathsSw3 = {
-              ...newPathsSw3,
-              blur: `blur-${key}`,
-            };
+        for (uploadParams of params) {
+          try {
+            const data = await uploadFileToSw3(uploadParams);
+            console.log(data);
+            if (data[`$metadata`].httpStatusCode == 200) {
+              if (uploadParams.Key.includes("tn")) {
+                newPathsSw3.thumbnail = uploadParams.Key;
+              } else if (uploadParams.Key.includes("blur")) {
+                newPathsSw3.blur = uploadParams.Key;
+              } else {
+                newPathsSw3.key = uploadParams.Key;
+              }
+
+              console.log(newPathsSw3);
+            }
+          } catch (e) {
+            console.log(e);
           }
         }
-        console.log("newPathsSw3 -> ", newPathsSw3);
+
         pathsSw3.push(newPathsSw3);
       } catch (error) {
         console.error("Error al subir un archivo a S3:", error);
@@ -285,18 +259,19 @@ app.post(
 
         for (const pathSw3 of pathsSw3) {
           try {
-            console.log(userId);
-
-            multimedia = await prisma.multimedia.create({
+            const multimedia = await prisma.multimedia.create({
               data: {
                 source: pathSw3.key,
                 type: pathSw3.type,
-                usersId: parseInt(userId),
-                blur: pathSw3.blur ? pathSw3.blur : null,
+                blur: pathSw3.blur || null,
+                thumbnail: pathSw3.thumbnail || null,
+                creator: {
+                  connect: {
+                    userId: parseInt(userId),
+                  },
+                },
               },
             });
-
-            console.log("multimedia creado:", multimedia);
 
             if (multimedia) multimediasID.push(multimedia.id);
           } catch (error) {
@@ -376,20 +351,24 @@ const port = process.env.PORT;
 startApolloServer();
 
 app.listen(port, async () => {
-  /**
- * 
- * 
- * 
- *   await prisma.conversation.deleteMany().then(async () => {
+  /*
+  await prisma.package.deleteMany();
+  await prisma.multimedia.deleteMany();
+  await prisma.post.deleteMany();
+  await prisma.conversation.deleteMany().then(async () => {
     console.log(
       await prisma.message.findMany(),
       await prisma.conversation.findMany()
     );
   });
- */
+
+
+*/
+
   console.log(`🚀 Server running at: ${port}`);
 });
 
+/*
 setInterval(async () => {
   try {
     const lastWeekDate = new Date();
@@ -410,5 +389,7 @@ setInterval(async () => {
     console.log();
   }
 }, 6000);
+
+*/
 
 module.exports = app;
