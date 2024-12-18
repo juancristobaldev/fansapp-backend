@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "target": "es6", // O el objetivo que estés usando
+    "experimentalDecorators": true, // Activa los decoradores experimentales
+    "emitDecoratorMetadata": true // Opción necesaria para la metadata de los decoradores
+  }
+}

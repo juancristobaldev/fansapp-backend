@@ -1,5 +1,10 @@
 const express = require("express"),
   app = express();
+
+const { NestFactory } = require("@nestjs/core");
+const { AppModule } = require("./src/app.module");
+const { ExpressAdapter } = require("@nestjs/platform-express");
+
 const session = require("express-session");
 const cors = require("cors");
 const passport = require("passport");
@@ -23,7 +28,16 @@ const { initS3Client } = require("./lib/aws3Functions");
 const { default: axios } = require("axios");
 const defs = require("./lib/admin/gql/defs");
 const { compressImage, compressVideo } = require("./lib/utilsMedia");
+
 const client = initS3Client();
+
+async function bootstrap() {
+  console.log("init nest.js");
+  const nestApp = await NestFactory.create(AppModule, new ExpressAdapter(app));
+  await nestApp.init();
+}
+
+bootstrap();
 
 app.use(
   session({
@@ -197,7 +211,17 @@ app.post(
 
     for (const buffer of blobs) {
       try {
-        const key = `${v4() + buffer.name}`;
+        function shuffleString(string) {
+          const array = string.split("");
+          for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+          }
+          return array.join("");
+        }
+
+        const key = `${v4() + shuffleString(buffer.name)}`;
+        console.log(buffer);
 
         let params = [
           {
@@ -230,23 +254,18 @@ app.post(
         for (uploadParams of params) {
           try {
             const data = await uploadFileToSw3(uploadParams);
-            console.log(data);
-            if (data[`$metadata`].httpStatusCode == 200) {
-              if (uploadParams.Key.includes("tn")) {
-                newPathsSw3.thumbnail = uploadParams.Key;
-              } else if (uploadParams.Key.includes("blur")) {
-                newPathsSw3.blur = uploadParams.Key;
-              } else {
-                newPathsSw3.key = uploadParams.Key;
-              }
 
-              console.log(newPathsSw3);
+            if (data[`$metadata`].httpStatusCode == 200) {
+              if (uploadParams.Key.includes("tn"))
+                newPathsSw3.thumbnail = uploadParams.Key;
+              else if (uploadParams.Key.includes("blur"))
+                newPathsSw3.blur = uploadParams.Key;
+              else newPathsSw3.key = uploadParams.Key;
             }
           } catch (e) {
             console.log(e);
           }
         }
-
         pathsSw3.push(newPathsSw3);
       } catch (error) {
         console.error("Error al subir un archivo a S3:", error);
@@ -258,6 +277,7 @@ app.post(
         const multimediasID = [];
 
         for (const pathSw3 of pathsSw3) {
+          console.log(pathSw3);
           try {
             const multimedia = await prisma.multimedia.create({
               data: {

@@ -43,7 +43,23 @@ model User {
   sentMessages         Message[]
   notificationReceiver Notification[]        @relation("receiver")
   membersConversation  MemberOfConversation[]
+  reports              Report[]
+  myReports            Report[] @relation("transmitterReport")
+}
 
+model Report {
+  id Int @unique @default(autoincrement())
+  reason String
+  post Post? @relation(fields:[postId], references: [id], onDelete: Cascade)
+  postId Int
+  comments Comment? @relation(fields:[commentId], references: [id], onDelete: Cascade)
+  commentId Int
+  messages Message? @relation(fields:[messageId], references: [id], onDelete: Cascade)
+  messageId Int
+  user User @relation(fields:[userId], references: [id], onDelete: Cascade)
+  userId Int 
+  transmitter User @relation("transmitterReport",fields:[transmitterId], references: [id], onDelete: Cascade)
+  transmitterId Int
 }
 
 model RequestCreator {
@@ -61,14 +77,14 @@ model RequestCreator {
 }
 
 model Creator {
-  id             Int              @unique @default(autoincrement())
+  id             Int @unique @default(autoincrement())
   approbedDate   DateTime?
   category       String? @db.VarChar(50)
   likes          Like[]
   suscriptors    Suscription[]
   saveds         Bookmarker[]
-  userId         Int              @unique
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int @unique
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
   request        RequestCreator[]
   multimedias    Multimedia[]
   posts          Post[]
@@ -93,7 +109,7 @@ model Customer {
 
 model Hashtag {
   id Int @unique @default(autoincrement())
-  hashtag String @db.VarChar(25)
+  hashtag String @unique @db.VarChar(25)
   profiles HashTagProfile[]
   posts HashTagPosts[]
 }
@@ -132,16 +148,16 @@ model Plan {
 
 model PostOfPlan {
   id      Int   @unique @default(autoincrement())
-  plans   Plan @relation(fields: [plansId], references: [id])
-  posts   Post @relation(fields: [postsId], references: [id])
+  plans   Plan @relation(fields: [plansId], references: [id], onDelete: Cascade)
+  posts   Post @relation(fields: [postsId], references: [id], onDelete: Cascade)
   plansId Int
   postsId Int
 }
 
 model PackageOfPlan {
   id       Int    @unique @default(autoincrement())
-  album    Package @relation(fields: [albumsId], references: [id])
-  plans    Plan  @relation(fields: [plansId], references: [id])
+  album    Package @relation(fields: [albumsId], references: [id],onDelete: Cascade)
+  plans    Plan  @relation(fields: [plansId], references: [id],onDelete: Cascade)
   albumsId Int
   plansId  Int
 }
@@ -149,6 +165,7 @@ model PackageOfPlan {
 model Package {
   id                Int             @unique @default(autoincrement())
   multimedia        Multimedia[]
+  saveds            Bookmarker[]
   creator           Creator           @relation(fields: [creatorId], references: [id])
   creatorId         Int
   sales             Sale[]
@@ -217,7 +234,7 @@ model Profile {
   instagram       String? @db.Text
   userId          Int     @unique
   users           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hashtags HashTagProfile[]
+  hashtags        HashTagProfile[]
 }
 
 model Sale {
@@ -308,6 +325,7 @@ model Message {
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId Int?
   seen           Boolean       @default(false)
+  reports        Report[]
 }
 
 model Notification {
@@ -356,6 +374,8 @@ model Bookmarker {
   postsId   Int?
   creator   Creator? @relation(fields: [creatorId], references: [id])
   creatorId Int?
+  packages Package? @relation(fields:[packageId], references: [id])
+  packageId Int?
   users     User    @relation(fields: [usersId], references: [id], onDelete: Cascade)
   usersId   Int
   createdAt DateTime @default(now())
@@ -369,9 +389,9 @@ model Multimedia {
   thumbnail String?  @db.Text
   creator   Creator? @relation(fields:[creatorId],references: [id], onDelete: Cascade)
   creatorId Int?
-  posts     Post?   @relation(fields: [postsId], references: [id], onDelete: SetNull)
+  posts     Post?   @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId   Int?
-  message   Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
   messageId Int?
   albums    Package?  @relation(fields: [albumId], references: [id])
   albumId   Int?
@@ -394,6 +414,7 @@ model Post {
   bookmarkers      Bookmarker[]
   postsOfPlans     PostOfPlan[]
   hashtags         HashTagPosts[]
+  reports          Report[]
 }
 
 model Like {
@@ -420,4 +441,5 @@ model Comment {
   posts        Post?         @relation(fields: [postsId], references: [id], onDelete: Cascade)
   postsId      Int?
   notification Notification[]
+  reports Report[]
 }
